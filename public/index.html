@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>東洋医学的AI体質診断 | 気血水 × 五臓</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="intro" aria-labelledby="page-title">
+        <div class="intro__copy">
+          <p class="eyebrow">気血水 × 五臓</p>
+          <h1 id="page-title">東洋医学的AI体質診断</h1>
+          <p>
+            疲れやすさ、冷え、睡眠、胃腸、ストレス、肌・鼻・水分代謝の傾向から、
+            今の体質バランスを整理します。
+          </p>
+        </div>
+        <div class="balance-map" aria-label="気血水と五臓の概念図">
+          <div class="map-core">
+            <span>気</span>
+            <span>血</span>
+            <span>水</span>
+          </div>
+          <div class="organ organ--liver">肝</div>
+          <div class="organ organ--heart">心</div>
+          <div class="organ organ--spleen">脾</div>
+          <div class="organ organ--lung">肺</div>
+          <div class="organ organ--kidney">腎</div>
+        </div>
+      </section>
+
+      <section class="diagnosis-panel" aria-live="polite">
+        <div class="progress">
+          <div class="progress__text">
+            <span id="phaseLabel">基本情報</span>
+            <span id="progressCount">1 / 1</span>
+          </div>
+          <div class="progress__bar" aria-hidden="true">
+            <span id="progressBar"></span>
+          </div>
+        </div>
+
+        <form id="diagnosisForm" novalidate>
+          <div id="screen"></div>
+          <div class="actions">
+            <button class="button button--ghost" type="button" id="backButton">戻る</button>
+            <button class="button button--primary" type="submit" id="nextButton">次へ</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <template id="welcomeTemplate">
+      <div class="screen-block">
+        <h2>まず、診断に使う基本情報を入力してください</h2>
+        <p class="note">
+          年代・性別は判定の主因ではなく、質問分岐と結果文の補助に使います。
+          この診断は医学的診断ではありません。
+        </p>
+        <div class="field-grid">
+          <label>
+            年代
+            <select name="ageBand" required>
+              <option value="">選択してください</option>
+              <option value="teens">10代</option>
+              <option value="20s">20代</option>
+              <option value="30s">30代</option>
+              <option value="40s">40代</option>
+              <option value="50s">50代</option>
+              <option value="60s">60代</option>
+              <option value="70plus">70代以上</option>
+            </select>
+          </label>
+          <label>
+            性別
+            <select name="gender" required>
+              <option value="">選択してください</option>
+              <option value="female">女性</option>
+              <option value="male">男性</option>
+              <option value="other">その他・回答しない</option>
+            </select>
+          </label>
+          <label>
+            最近の睡眠
+            <select name="sleep" required>
+              <option value="">選択してください</option>
+              <option value="stable">おおむね安定</option>
+              <option value="light">浅い・夢が多い</option>
+              <option value="short">短い・寝不足</option>
+              <option value="irregular">かなり不規則</option>
+            </select>
+          </label>
+          <label>
+            最近のストレス
+            <select name="stress" required>
+              <option value="">選択してください</option>
+              <option value="low">少ない</option>
+              <option value="moderate">普通</option>
+              <option value="high">多い</option>
+              <option value="veryHigh">かなり多い</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
