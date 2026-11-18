@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>試験概要と出題傾向</title>
+<style>
+  :root {
+    --bg: #faf8f4; --surface: #ffffff; --ink: #24201c; --sub: #6b635b;
+    --line: #e4ddd2; --tint: #f3eee6; --accent: #b5452f; --accent-soft: #f6e4df;
+    --hi: #b5452f; --hi-bg: #f6e4df; --mid: #8a6a1f; --mid-bg: #f4ecd6;
+    --off: #6b635b; --off-bg: #eeeae4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #1b1916; --surface: #23201c; --ink: #ece6dc; --sub: #a89f94;
+      --line: #3a352f; --tint: #2b2722; --accent: #e0826c; --accent-soft: #3d2620;
+      --hi: #ef9a86; --hi-bg: #3d2620; --mid: #dcc07a; --mid-bg: #3a3120;
+      --off: #a89f94; --off-bg: #2b2722;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #1b1916; --surface: #23201c; --ink: #ece6dc; --sub: #a89f94;
+    --line: #3a352f; --tint: #2b2722; --accent: #e0826c; --accent-soft: #3d2620;
+    --hi: #ef9a86; --hi-bg: #3d2620; --mid: #dcc07a; --mid-bg: #3a3120;
+    --off: #a89f94; --off-bg: #2b2722;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font-family: "Noto Sans JP", system-ui, sans-serif; font-size: 15px; line-height: 1.85; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 40px 16px 80px; }
+  h2 { font-size: 24px; margin: 0 0 8px; }
+  h3 { font-size: 18px; margin: 36px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--sub); }
+  .table-wrap { overflow-x: auto; margin: 12px 0 16px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.7; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  th { background: var(--tint); font-size: 12.5px; color: var(--sub); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .nowrap { white-space: nowrap; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 0 10px;
+    border-radius: 999px; white-space: nowrap; }
+  .tag.hi { color: var(--hi); background: var(--hi-bg); }
+  .tag.mid { color: var(--mid); background: var(--mid-bg); }
+  .tag.off { color: var(--off); background: var(--off-bg); }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; margin: 10px 0; }
+  summary { cursor: pointer; padding: 12px 16px; font-weight: 700; }
+  summary small { font-weight: 400; color: var(--sub); margin-left: 8px; }
+  details > .body { padding: 0 16px 12px; }
+  details .table-wrap { border: 0; margin: 0; }
+  .unit { font-weight: 700; white-space: nowrap; }
+  .trap { color: var(--sub); font-size: 13px; display: block; margin-top: 4px; }
+  .trap::before { content: "ひっかけ："; color: var(--accent); font-weight: 700; }
+  .note { font-size: 13px; color: var(--sub); }
+  .box { background: var(--tint); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+  .box p:last-child { margin: 0; }
+  .plan-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 16px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 16px; margin: 12px 0; }
+  .plan-form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--sub); }
+  .plan-form input, .plan-form select { font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; min-height: 40px; }
+  .plan-form fieldset { grid-column: 1 / -1; border: 0; padding: 0; margin: 0; }
+  .plan-form legend { font-size: 13px; color: var(--sub); margin-bottom: 4px; }
+  .plan-form .check { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 8px; color: var(--ink); }
+  .plan-form .check input { min-height: 0; }
+  .days { display: flex; flex-wrap: wrap; gap: 6px; }
+  .days label { flex-direction: row; align-items: center; gap: 4px; border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 12px; color: var(--ink); cursor: pointer; }
+  .days input { min-height: 0; }
+  .plan-summary { background: var(--accent-soft); border-radius: 8px; padding: 14px 16px; margin: 12px 0; }
+  .plan-summary p { margin: 0 0 4px; }
+  .plan-summary .warn { color: var(--accent); font-weight: 700; }
+  .plan-day { display: grid; grid-template-columns: 7.5em 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 14px; }
+  .plan-day .date { color: var(--sub); white-space: nowrap; }
+  .plan-month { font-weight: 700; margin: 20px 0 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ここから：スクールの「試験概要」に差し込む部分 -->
+<section id="exam-overview">
+  <h2>試験概要</h2>
+  <p class="lead">国際中医師（国際中医専門員）試験の科目と、この塾の章との対応、単元ごとの出題傾向をまとめました。</p>
+
+  <h3>試験の科目と、この塾の章</h3>
+  <p>試験は6科目。そのうち5科目はマークシート、弁証論治だけが記述式です。この塾は、まず土台になる<strong>中医基礎理論</strong>と<strong>中医診断学</strong>を扱っています。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>試験科目</th><th>形式</th><th>この塾の対応</th><th>状況</th></tr></thead>
+      <tbody>
+        <tr><td class="nowrap">中医基礎理論</td><td>マークシート</td><td>第1章 陰陽・五行<br>第2章 気・血・津液<br>第3章 臓腑と経絡<br>第4章 病因・病機と治療の原則</td><td><span class="tag hi">対応済み</span></td></tr>
+        <tr><td class="nowrap">中医診断学</td><td>マークシート</td><td>第5章 診断（四診）と弁証</td><td><span class="tag hi">対応済み</span></td></tr>
+        <tr><td class="nowrap">弁証論治</td><td>記述（症例）</td><td>5-8〜5-12（八綱・気血津液・臓腑弁証）と 4-9（治療の原則）が土台。医療従事者コースの症例問題で練習できます</td><td><span class="tag mid">一部対応</span></td></tr>
+        <tr><td class="nowrap">中薬学</td><td>マークシート</td><td>第6章「中薬と方剤」で扱う予定</td><td><span class="tag off">準備中</span></td></tr>
+        <tr><td class="nowrap">方剤学</td><td>マークシート</td><td>第6章で扱う予定（医療従事者コースの本文に、代表的な方剤の例があります）</td><td><span class="tag off">準備中</span></td></tr>
+        <tr><td class="nowrap">中医臨床（内科など）</td><td>マークシート</td><td>未対応。5-11・5-12 の臓腑弁証が入口になります</td><td><span class="tag off">準備中</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="box">
+    <p><strong>試験のしくみ（目安）</strong>：マークシートの科目は各100問で、60問以上の正解が合格の目安とされています。弁証論治は症例を読んで、証・治法などを書く記述式です。問題は、受講するスクールで配られる過去問集から多く出るとされ、過去問の反復が対策の中心になります。</p>
+  </div>
+  <p class="note">試験の形式・科目の分け方は、年度や実施団体によって変わることがあります。必ず受講中のスクールと実施団体の最新の案内を確認してください。この塾は国際中医師の資格を出すものではなく、合格を保証するものでもありません。受験には、認定されたスクールでの受講が必要です。</p>
+
+  <h3>単元ごとの出題傾向</h3>
+  <p>各単元で「よく問われる点」と「ひっかけやすい点」をまとめています。<span class="tag hi">最重要</span> は配点が厚く毎年のように問われる分野、<span class="tag mid">重要</span> はそれに次ぐ分野の目安です。</p>
+
+  <details open>
+    <summary>第1章 陰陽・五行<small>中医基礎理論</small></summary>
+    <div class="body"><div class="table-wrap"><table>
+      <thead><tr><th>単元</th><th>目安</th><th>よく問われる点</th></tr></thead>
+      <tbody>
+        <tr><td class="unit">1-1 中医学ってどんな医学？</td><td><span class="tag mid">重要</span></td><td>中医学の2つの特徴（整体観念・弁証論治）、症・証・病の違い、同病異治・異病同治<span class="trap">「症」と「証」の取り違え</span></td></tr>
+        <tr><td class="unit">1-2 陰陽①</td><td><span class="tag mid">重要</span></td><td>陰陽の属性（上下・内外・背腹・臓腑・昼夜）、陰中の陽・陽中の陰の細分<span class="trap">背＝陽・腹＝陰、脾は「陰中の至陰」</span></td></tr>
+        <tr><td class="unit">1-3 陰陽②</td><td><span class="tag hi">最重要</span></td><td>4つの関係（対立制約・互根互用・消長平衡・相互転化）、偏盛・偏衰、陰陽の治則（壮水之主…／益火之源…）<span class="trap">例文がどの関係に当たるかを選ばせる問題（陽生陰長＝互根互用 など）</span></td></tr>
+        <tr><td class="unit">1-4 五行①</td><td><span class="tag hi">最重要</span></td><td>五行の配当表（五臓・五腑・五官・五体・五志・五液・五色・五味・五季）の組み合わせ<span class="trap">五液（涙・汗・涎・涕・唾）、肺の志（悲／憂）、腎の竅（耳と二陰）</span></td></tr>
+        <tr><td class="unit">1-5 五行②</td><td><span class="tag hi">最重要</span></td><td>相生・相剋・相乗・相侮、母病及子・子病及母、五行による治法（培土生金・滋水涵木・益火補土・抑木扶土・佐金平木・瀉南補北 など）<span class="trap">相乗と相侮の向き、治法名と五行関係の対応</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details>
+    <summary>第2章 気・血・津液<small>中医基礎理論</small></summary>
+    <div class="body"><div class="table-wrap"><table>
+      <thead><tr><th>単元</th><th>目安</th><th>よく問われる点</th></tr></thead>
+      <tbody>
+        <tr><td class="unit">2-1 気①</td><td><span class="tag hi">最重要</span></td><td>気の生成（先天の精気・水穀の精微・清気）とかかわる臓、気の働き（推動・温煦・防御・固摂・気化）<span class="trap">症状から「どの働きの失調か」を選ぶ問題</span></td></tr>
+        <tr><td class="unit">2-2 気②</td><td><span class="tag hi">最重要</span></td><td>気機（升降出入）と気滞・気逆・気陥・気閉・気脱、元気・宗気・営気・衛気の生成・分布・働き<span class="trap">宗気は胸中に集まり「息道を走り心脈を貫く」、衛気は脈外・営気は脈中</span></td></tr>
+        <tr><td class="unit">2-3 血</td><td><span class="tag mid">重要</span></td><td>血の生成（脾胃・心肺・腎精）、血の働き、血の運行にかかわる臓（心・肺・脾・肝）<span class="trap">脾＝統血、肝＝蔵血の取り違え</span></td></tr>
+        <tr><td class="unit">2-4 津液</td><td><span class="tag mid">重要</span></td><td>津と液の違い（性状・分布・働き）、生成・輸布・排泄にかかわる臓（脾・肺・腎・三焦・膀胱）<span class="trap">津＝清く薄い／液＝濃く粘る、の逆転</span></td></tr>
+        <tr><td class="unit">2-5 気・血・津液の関係</td><td><span class="tag hi">最重要</span></td><td>気為血之帥・血為気之母、気能生血・行血・摂血、津血同源、気随血脱・気随津脱<span class="trap">「奪血者無汗、奪汗者無血」の意味</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details>
+    <summary>第3章 臓腑と経絡<small>中医基礎理論（いちばん出題が厚い分野）</small></summary>
+    <div class="body"><div class="table-wrap"><table>
+      <thead><tr><th>単元</th><th>目安</th><th>よく問われる点</th></tr></thead>
+      <tbody>
+        <tr><td class="unit">3-1 蔵象とは</td><td><span class="tag mid">重要</span></td><td>五臓・六腑・奇恒の腑の分け方と特徴（蔵して瀉さず／瀉して蔵さず）、奇恒の腑の6つ<span class="trap">胆は六腑と奇恒の腑の両方に入る</span></td></tr>
+        <tr><td class="unit">3-2 心</td><td><span class="tag hi">最重要</span></td><td>心主血脈・心蔵神、心の竅・華・液・志・体、心包<span class="trap">心の竅＝舌、液＝汗</span></td></tr>
+        <tr><td class="unit">3-3 肺</td><td><span class="tag hi">最重要</span></td><td>肺主気・司呼吸、宣発と粛降、通調水道（水の上源）、朝百脈・主治節<span class="trap">宣発の失調と粛降の失調で出る症状の振り分け</span></td></tr>
+        <tr><td class="unit">3-4 脾</td><td><span class="tag hi">最重要</span></td><td>運化（水穀・水湿）、昇清、統血、後天の本、喜燥悪湿<span class="trap">脾気下陥と脾不統血の症状の区別</span></td></tr>
+        <tr><td class="unit">3-5 肝</td><td><span class="tag hi">最重要</span></td><td>疏泄（気機・情志・消化・血と津液・月経）、蔵血、筋・爪・目・涙・怒<span class="trap">疏泄の「不及」と「太過」の症状</span></td></tr>
+        <tr><td class="unit">3-6 腎</td><td><span class="tag hi">最重要</span></td><td>蔵精（先天・後天）と生長・発育・生殖、主水、主納気、腎陰・腎陽と命門、先天の本<span class="trap">腎の竅（耳・二陰）、華＝髪、液＝唾</span></td></tr>
+        <tr><td class="unit">3-7 六腑と奇恒の腑</td><td><span class="tag mid">重要</span></td><td>各腑の働き（小腸の受盛化物・泌別清濁 など）、三焦の部位と働き（上焦如霧・中焦如漚・下焦如瀆）、女子胞と天癸<span class="trap">三焦の上・中・下にどの臓が入るか</span></td></tr>
+        <tr><td class="unit">3-8 臓腑どうしの関係</td><td><span class="tag hi">最重要</span></td><td>臓と臓（心腎相交・肝腎同源・肺と腎・脾と腎・肝と脾 など）、臓と腑の表裏の組み合わせ<span class="trap">心と小腸、心包と三焦の表裏</span></td></tr>
+        <tr><td class="unit">3-9 経絡①</td><td><span class="tag hi">最重要</span></td><td>十二経脈の名前・走行の向き・交わる場所・流注の順番・表裏、体の前中後への分布<span class="trap">流注の順番と、どこで次の経脈につながるか</span></td></tr>
+        <tr><td class="unit">3-10 経絡②</td><td><span class="tag mid">重要</span></td><td>奇経八脈の働き（督脈＝陽脈の海、任脈＝陰脈の海、衝脈＝血海・十二経脈の海、帯脈 など）、経絡の働きと応用<span class="trap">督・任・衝が「一源三岐」で胞中から起こる</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details>
+    <summary>第4章 病因・病機と治療の原則<small>中医基礎理論</small></summary>
+    <div class="body"><div class="table-wrap"><table>
+      <thead><tr><th>単元</th><th>目安</th><th>よく問われる点</th></tr></thead>
+      <tbody>
+        <tr><td class="unit">4-1 六淫と疫気</td><td><span class="tag hi">最重要</span></td><td>六淫それぞれの性質と病の特徴（風は百病の長・寒は凝滞収引・湿は重濁粘滞・燥は肺を傷る・火は生風動血 など）、疫気の特徴<span class="trap">性質の説明文から邪を選ぶ問題</span></td></tr>
+        <tr><td class="unit">4-2 七情・飲食・労逸・外傷</td><td><span class="tag hi">最重要</span></td><td>七情と傷られる臓、気機の乱れ（怒則気上・喜則気緩・悲則気消・恐則気下・驚則気乱・思則気結）、五労所傷<span class="trap">「久視傷血・久臥傷気・久坐傷肉…」の組み合わせ</span></td></tr>
+        <tr><td class="unit">4-3 痰飲・瘀血と発病</td><td><span class="tag mid">重要</span></td><td>痰飲・瘀血ができる原因と病の特徴（瘀血の痛みは刺すよう・場所が決まる・夜に強まる）、正気と邪気による発病の原理<span class="trap">「正気存内、邪不可干」「邪之所湊、其気必虚」</span></td></tr>
+        <tr><td class="unit">4-4 邪正盛衰と陰陽失調</td><td><span class="tag hi">最重要</span></td><td>虚実（邪気盛則実・精気奪則虚）、虚実の錯雑と真仮、陰陽の偏盛・偏衰・互損・格拒、亡陰・亡陽<span class="trap">実熱（陽盛）と虚熱（陰虚）、真寒仮熱と真熱仮寒</span></td></tr>
+        <tr><td class="unit">4-5 気血・津液の失調</td><td><span class="tag mid">重要</span></td><td>気虚・気機失調、血虚・血瘀・出血、津液不足と水湿の停滞、気血・気津の関係の失調<span class="trap">気不摂血と血熱の出血の違い</span></td></tr>
+        <tr><td class="unit">4-6 内生五邪と経絡の病機</td><td><span class="tag hi">最重要</span></td><td>内風の4型（肝陽化風・熱極生風・陰虚風動・血虚生風）、寒従中生・湿濁内生・津傷化燥・火熱内生<span class="trap">内風の4型の見分け</span></td></tr>
+        <tr><td class="unit">4-7 五臓の病機</td><td><span class="tag mid">重要</span></td><td>五臓それぞれの虚実の病機（心気虚・心陽虚、肝気鬱結・肝火上炎・肝陽上亢 など）。第5章の臓腑弁証の土台</td></tr>
+        <tr><td class="unit">4-8 六腑・奇恒の腑の病機</td><td><span class="tag off">標準</span></td><td>胃気上逆・膀胱の気化不利 など六腑の病機、脳・髄・骨・女子胞の病機</td></tr>
+        <tr><td class="unit">4-9 予防と治療の原則</td><td><span class="tag hi">最重要</span></td><td>治未病（未病先防・既病防変）、治病求本、正治と反治（熱因熱用・寒因寒用・塞因塞用・通因通用）、標本緩急、扶正祛邪、三因制宜<span class="trap">正治と反治の区別。弁証論治の記述で「治法」を書く土台にもなる</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <details>
+    <summary>第5章 診断（四診）と弁証<small>中医診断学・弁証論治</small></summary>
+    <div class="body"><div class="table-wrap"><table>
+      <thead><tr><th>単元</th><th>目安</th><th>よく問われる点</th></tr></thead>
+      <tbody>
+        <tr><td class="unit">5-1 望診① 神と顔色</td><td><span class="tag mid">重要</span></td><td>四診合参、得神・少神・失神・仮神、五色の主病（青・赤・黄・白・黒）<span class="trap">仮神（一時的に元気に見える）</span></td></tr>
+        <tr><td class="unit">5-2 望診② 体・頭顔・皮膚・排泄物</td><td><span class="tag off">標準</span></td><td>体つきと姿勢、斑と疹、小児の示指絡脈（三関と色・浮沈の読み方）、排泄物の見方</td></tr>
+        <tr><td class="unit">5-3 舌診① 舌の色・形・動き</td><td><span class="tag hi">最重要</span></td><td>舌の部位と臓腑、舌色（淡白・淡紅・紅・絳・青紫）と主病、舌形（胖大・歯痕・裂紋・点刺 など）、舌態<span class="trap">紅舌と絳舌の違い</span></td></tr>
+        <tr><td class="unit">5-4 舌診② 舌苔と総合判断</td><td><span class="tag hi">最重要</span></td><td>苔の厚薄・潤燥・膩腐・剥落と苔色（白・黄・灰黒）の主病、舌質と舌苔を合わせた読み<span class="trap">剥落苔・鏡面舌＝胃陰（胃気）の損傷</span></td></tr>
+        <tr><td class="unit">5-5 聞診と問診① 寒熱・汗</td><td><span class="tag hi">最重要</span></td><td>悪寒発熱・但寒不熱・但熱不寒（壮熱・潮熱・微熱）・寒熱往来、自汗・盗汗・戦汗・絶汗 など<span class="trap">潮熱の3型（陽明・陰虚・湿温）</span></td></tr>
+        <tr><td class="unit">5-6 問診② 痛み・睡眠・飲食・二便・月経</td><td><span class="tag hi">最重要</span></td><td>痛みの性質（脹痛＝気滞、刺痛＝瘀血、重痛＝湿、隠痛＝虚 など）と部位、口渇・口味、便と尿、月経・帯下<span class="trap">痛みの性質と原因の組み合わせ、五更泄瀉</span></td></tr>
+        <tr><td class="unit">5-7 切診 脈診と按診</td><td><span class="tag hi">最重要</span></td><td>寸口の三部と臓腑、平脈、二十八脈の形と主病、相兼脈、按診<span class="trap">促・結・代の区別、濡・弱・細の区別</span></td></tr>
+        <tr><td class="unit">5-8 八綱① 表裏・寒熱</td><td><span class="tag hi">最重要</span></td><td>表証・裏証・半表半裏、寒証・熱証の見分け、寒熱錯雑と寒熱の真仮<span class="trap">真寒仮熱と真熱仮寒</span></td></tr>
+        <tr><td class="unit">5-9 八綱② 虚実・陰陽</td><td><span class="tag hi">最重要</span></td><td>虚証・実証、虚実錯雑と真仮、陰証・陽証、亡陰・亡陽の見分け（汗・脈・手足）</td></tr>
+        <tr><td class="unit">5-10 病因弁証と気血津液弁証</td><td><span class="tag hi">最重要</span></td><td>六淫の証、気虚・気陥・気滞・気逆、血虚・血瘀・血熱・血寒、痰・飲・水停・津液不足の証<span class="trap">弁証論治の記述でも土台になる</span></td></tr>
+        <tr><td class="unit">5-11 臓腑弁証① 心・肺・脾</td><td><span class="tag hi">最重要</span></td><td>心・肺・脾（胃・小腸・大腸を含む）の各証の主症状と舌脈<span class="trap">弁証論治の記述問題で、証名と根拠を書く練習に直結</span></td></tr>
+        <tr><td class="unit">5-12 臓腑弁証② 肝・腎と兼証</td><td><span class="tag hi">最重要</span></td><td>肝・腎（胆・膀胱を含む）の各証、臓腑兼証（心脾両虚・心腎不交・肝脾不調・肝胃不和・脾腎陽虚・肝腎陰虚 など）<span class="trap">似た兼証の見分け。弁証論治の記述に直結</span></td></tr>
+      </tbody>
+    </table></div></div>
+  </details>
+
+  <p class="note">出題傾向は、試験範囲の教科書の構成と、受験生のあいだでよく問われるとされる論点をもとにした目安です。実際の出題数を数えたものではありません。過去問集の問題文そのものは、この塾の教材やテストには使っていません。</p>
+</section>
+<!-- ここまで -->
+
+<!-- ここから：「学習プラン」に差し込む部分 -->
+<section id="study-plan">
+  <h2 style="margin-top:48px">学習プラン</h2>
+  <p class="lead">試験日と、1日に勉強できる時間を選ぶと、41単元をいつまでに終えられるかを日ごとの予定にします。</p>
+
+  <form class="plan-form" id="planForm">
+    <label>試験日
+      <input type="date" id="planExam">
+    </label>
+    <label>学習を始める日
+      <input type="date" id="planStart">
+    </label>
+    <label>1日の勉強時間
+      <select id="planMinutes">
+        <option value="15">15分</option>
+        <option value="30" selected>30分</option>
+        <option value="45">45分</option>
+        <option value="60">1時間</option>
+        <option value="90">1時間30分</option>
+        <option value="120">2時間</option>
+        <option value="180">3時間</option>
+        <option value="custom">自分で決める</option>
+      </select>
+    </label>
+    <label id="planCustomWrap" hidden>勉強時間（分）
+      <input type="number" id="planCustom" min="5" max="600" step="5" value="40" inputmode="numeric">
+    </label>
+    <fieldset>
+      <legend>勉強する曜日</legend>
+      <div class="days" id="planDays"></div>
+    </fieldset>
+    <label class="check"><input type="checkbox" id="planReview" checked> 試験前に、総復習と過去問の期間をとる（2週間）</label>
+  </form>
+
+  <div class="plan-summary" id="planSummary" aria-live="polite"></div>
+  <div id="planList"></div>
+  <p class="note">1単元の時間は「本文・図解・動画・確認テスト」をひと通り終える目安です（最重要 60分／重要 45分／標準 30分）。1日の時間に収まらない単元は、2日以上に分けて表示します。</p>
+</section>
+<!-- ここまで -->
+
+</div>
+<script>
+(() => {
+  // 単元の一覧と、1単元にかかる時間の目安（分）。最重要=60、重要=45、標準=30
+  const UNITS = [
+    ["1-1","中医学ってどんな医学？",45],["1-2","陰陽①",45],["1-3","陰陽②",60],["1-4","五行①",60],["1-5","五行②",60],
+    ["2-1","気①",60],["2-2","気②",60],["2-3","血",45],["2-4","津液",45],["2-5","気・血・津液の関係",60],
+    ["3-1","蔵象とは",45],["3-2","心",60],["3-3","肺",60],["3-4","脾",60],["3-5","肝",60],["3-6","腎",60],
+    ["3-7","六腑と奇恒の腑",45],["3-8","臓腑どうしの関係",60],["3-9","経絡①",60],["3-10","経絡②",45],
+    ["4-1","六淫と疫気",60],["4-2","七情・飲食・労逸・外傷",60],["4-3","痰飲・瘀血と発病",45],["4-4","邪正盛衰と陰陽失調",60],
+    ["4-5","気血・津液の失調",45],["4-6","内生五邪と経絡の病機",60],["4-7","五臓の病機",45],["4-8","六腑・奇恒の腑の病機",30],
+    ["4-9","予防と治療の原則",60],
+    ["5-1","望診① 神と顔色",45],["5-2","望診② 体・頭顔・皮膚・排泄物",30],["5-3","舌診① 舌の色・形・動き",60],
+    ["5-4","舌診② 舌苔と総合判断",60],["5-5","聞診と問診① 寒熱・汗",60],["5-6","問診② 痛み・睡眠・飲食・二便・月経",60],
+    ["5-7","切診 脈診と按診",60],["5-8","八綱① 表裏・寒熱",60],["5-9","八綱② 虚実・陰陽",60],
+    ["5-10","病因弁証と気血津液弁証",60],["5-11","臓腑弁証① 心・肺・脾",60],["5-12","臓腑弁証② 肝・腎と兼証",60]
+  ];
+  const REVIEW_DAYS = 14;
+  const WD = ["日","月","火","水","木","金","土"];
+  const KEY = "studyPlan.v1";
+  const $ = id => document.getElementById(id);
+
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y, m-1, d); };
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+  const fmt = d => `${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`;
+  const hm = m => m >= 60 ? `${Math.floor(m/60)}時間${m%60 ? m%60+"分" : ""}` : `${m}分`;
+
+  // 曜日のチェックボックス
+  $("planDays").innerHTML = WD.map((w,i) =>
+    `<label><input type="checkbox" value="${i}" checked> ${w}</label>`).join("");
+
+  // 保存した設定を読む（この端末のブラウザだけに残る）
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) {}
+  const today = new Date(); today.setHours(0,0,0,0);
+  $("planStart").value = saved.start || iso(today);
+  $("planExam").value = saved.exam || iso(addDays(today, 180));
+  if (saved.minutes) {
+    const opt = [...$("planMinutes").options].some(o => o.value === String(saved.minutes));
+    $("planMinutes").value = opt ? String(saved.minutes) : "custom";
+    if (!opt) $("planCustom").value = saved.minutes;
+  }
+  if (Array.isArray(saved.days)) {
+    $("planDays").querySelectorAll("input").forEach(c => c.checked = saved.days.includes(Number(c.value)));
+  }
+  if (typeof saved.review === "boolean") $("planReview").checked = saved.review;
+
+  function minutesPerDay() {
+    if ($("planMinutes").value === "custom") {
+      return Math.min(600, Math.max(5, Math.round(Number($("planCustom").value) || 0)));
+    }
+    return Number($("planMinutes").value);
+  }
+
+  // 単元を日ごとに詰める。1日の時間に収まらない単元は複数日に分ける
+  function schedule(start, perDay, days) {
+    const out = [];
+    let d = new Date(start), left = 0, entries = [];
+    const nextStudyDay = () => { while (!days.includes(d.getDay())) d = addDays(d, 1); };
+    nextStudyDay(); left = perDay;
+    for (const [id, title, need] of UNITS) {
+      let rest = need, part = 0;
+      const parts = Math.ceil(need / perDay) > 1 || need > left;
+      while (rest > 0) {
+        // その日の残りが15分未満なら、単元の続きは翌日に回す（細切れを避ける）
+        if (left <= 0 || (left < rest && left < Math.min(15, perDay) && entries.length)) {
+          out.push({ date: d, entries }); entries = [];
+          d = addDays(d, 1); nextStudyDay(); left = perDay;
+        }
+        const use = Math.min(rest, left);
+        part++;
+        entries.push({ id, title, min: use, part, split: parts && use < need });
+        rest -= use; left -= use;
+      }
+    }
+    if (entries.length) out.push({ date: d, entries });
+    return out;
+  }
+
+  function render() {
+    const perDay = minutesPerDay();
+    const days = [...$("planDays").querySelectorAll("input:checked")].map(c => Number(c.value));
+    const start = parse($("planStart").value || iso(today));
+    const exam = $("planExam").value ? parse($("planExam").value) : null;
+    const review = $("planReview").checked;
+    $("planCustomWrap").hidden = $("planMinutes").value !== "custom";
+
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ start: iso(start), exam: exam && iso(exam), minutes: perDay, days, review }));
+    } catch (e) {}
+
+    if (!days.length) {
+      $("planSummary").innerHTML = `<p class="warn">勉強する曜日を1つ以上選んでください。</p>`;
+      $("planList").innerHTML = ""; return;
+    }
+
+    const plan = schedule(start, perDay, days);
+    const finish = plan[plan.length - 1].date;
+    const total = UNITS.reduce((s,u) => s + u[2], 0);
+    const lines = [
+      `<p>全41単元・合計およそ <strong>${hm(total)}</strong>。1日 <strong>${hm(perDay)}</strong>、週${days.length}日のペースで、<strong>${fmt(finish)}</strong> にひと通り終わります（勉強する日は ${plan.length}日）。</p>`
+    ];
+    if (exam) {
+      const deadline = review ? addDays(exam, -REVIEW_DAYS) : addDays(exam, -1);
+      if (exam <= start) {
+        lines.push(`<p class="warn">試験日が、学習を始める日より前になっています。</p>`);
+      } else if (finish > deadline) {
+        // 締め切りまでに使える勉強日の数から、必要な1日の時間を逆算する
+        let n = 0;
+        for (let x = new Date(start); x <= deadline; x = addDays(x, 1)) if (days.includes(x.getDay())) n++;
+        const need = n > 0 ? Math.ceil(total / n / 5) * 5 : null;
+        lines.push(`<p class="warn">このペースだと${review ? "総復習の期間（試験の2週間前）" : "試験日"}までに終わりません。</p>`);
+        lines.push(need ? `<p>間に合わせるには、1日およそ <strong>${hm(need)}</strong> が目安です。曜日を増やすか、時間を延ばしてください。</p>`
+                        : `<p>締め切りまでに勉強する日がありません。曜日か試験日を見直してください。</p>`);
+      } else {
+        const spare = Math.round((deadline - finish) / 86400000);
+        lines.push(`<p>${review ? `試験の2週間前（${fmt(deadline)}）から総復習と過去問にあてられます。` : ""}余裕は ${spare}日 あります。余った日は、確認テストの解き直しや過去問にあててください。</p>`);
+      }
+    }
+    $("planSummary").innerHTML = lines.join("");
+
+    let month = -1, html = "";
+    for (const day of plan) {
+      if (day.date.getMonth() !== month) {
+        month = day.date.getMonth();
+        html += `<div class="plan-month">${day.date.getFullYear()}年${month+1}月</div>`;
+      }
+      const text = day.entries.map(e =>
+        `${e.id} ${e.title}${e.split ? `（${e.part}回目・${e.min}分）` : `（${e.min}分）`}`).join("<br>");
+      html += `<div class="plan-day"><span class="date">${fmt(day.date)}</span><span>${text}</span></div>`;
+    }
+    if (exam && review && exam > start) {
+      html += `<div class="plan-day"><span class="date">${fmt(addDays(exam,-REVIEW_DAYS))}〜</span><span>総復習・過去問（試験の2週間前から）</span></div>`;
+    }
+    if (exam && exam > start) {
+      html += `<div class="plan-day"><span class="date">${fmt(exam)}</span><span><strong>試験日</strong></span></div>`;
+    }
+    $("planList").innerHTML = html;
+  }
+
+  $("planForm").addEventListener("input", render);
+  $("planForm").addEventListener("change", render);
+  render();
+})();
+</script>
+</body>
+</html>
