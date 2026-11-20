@@ -100,8 +100,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .btn.danger.armed { background: var(--warn); color: var(--surface); }
 .btn.small { padding: 7px 10px; font-size: 13px; border-radius: 8px; }
 .btn.block { width: 100%; }
-input.nativefile { font-size: 14px; padding: 10px; background: var(--surface); color: var(--ink); }
-input.nativefile::file-selector-button { font: inherit; font-weight: 700; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 10px 14px; margin-right: 10px; cursor: pointer; }
+label.filebtn { position: relative; flex-direction: row; font-size: 15px; color: var(--ink); overflow: hidden; }
+label.filebtn.primary { color: var(--accent-ink); }
+label.filebtn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; padding: 0; border: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row > .grow { flex: 1; min-width: 0; }
 .muted { color: var(--muted); }
@@ -456,8 +457,8 @@ function renderForm(m) {
       <h2>指示書の写真</h2>
       <div class="panel">
         <div class="photos" id="photos">${draft.photoIds.map(id => `<div class="photo"><img data-photo="${id}" alt="指示書の写真" data-zoom="${id}"><button type="button" class="x" data-rmphoto="${id}" aria-label="写真を外す">×</button></div>`).join("") || `<p class="muted small" style="margin:0">指示書を撮影しておくと、原本の控えとして後から見返せます。写真はこのスマホの中だけに保存されます。</p>`}</div>
-        <label>写真を付ける（下の「ファイルを選択」を押すと、撮影かアルバムか選べます）<input type="file" accept="image/*" multiple data-file class="nativefile" id="f-photo"></label>
-        <p class="muted small" style="margin:0">押しても反応しないときは、このページをSafariやChromeで開いてください。パソコンでは写真をこの画面に貼り付け（Ctrl+V）でも付けられます。</p>
+        <div class="grid2"><label class="btn filebtn primary" id="f-cam">カメラで撮る<input type="file" accept="image/*" capture="environment" data-file></label><label class="btn filebtn" id="f-photo">写真から選ぶ<input type="file" accept="image/*" multiple data-file></label></div>
+        <p class="muted small" style="margin:0">Claudeアプリの中では押せないことがあります。そのときはSafariやChromeで開いてください。</p>
       </div>
     </div>
     <div class="section">
