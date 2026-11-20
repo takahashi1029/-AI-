@@ -1,0 +1,529 @@
+<title>タイムカード計算</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one column — 読み取り → 明細表 → 集計, settings in a collapsible panel. Card-stock paper, stamp-red accent. */
+:root{
+  --bg:#f3f1ea; --paper:#fbfaf6; --ink:#24262b; --muted:#6b6d72; --line:#d9d5c8;
+  --accent:#c2412d; --accent-ink:#fff; --blue:#2f5d8a; --warn:#b7791f; --warn-bg:#fdf3dc; --bad:#b42318; --bad-bg:#fde8e6; --ok:#2f7a4b;
+  --font-body:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --font-num:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#17181b; --paper:#202227; --ink:#e8e6df; --muted:#9a9ca3; --line:#34373e;
+  --accent:#e0624c; --accent-ink:#1a0f0c; --blue:#7fb0e0; --warn:#e0b25a; --warn-bg:#3a2f18; --bad:#f2836f; --bad-bg:#3d1f1b; --ok:#6cc08c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17181b; --paper:#202227; --ink:#e8e6df; --muted:#9a9ca3; --line:#34373e;
+  --accent:#e0624c; --accent-ink:#1a0f0c; --blue:#7fb0e0; --warn:#e0b25a; --warn-bg:#3a2f18; --bad:#f2836f; --bad-bg:#3d1f1b; --ok:#6cc08c; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+h1{font-size:1.6rem;margin:0;letter-spacing:.04em;text-wrap:balance}
+h1 small{display:block;font-size:.8rem;color:var(--muted);font-weight:500;letter-spacing:.02em}
+h2{font-size:1rem;margin:0;letter-spacing:.06em}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.muted{color:var(--muted);font-size:.85rem}
+button,.btn{font:inherit;font-size:.9rem;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:4px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+button:disabled{opacity:.5;cursor:default}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:5px 7px}
+textarea{width:100%;min-height:88px;font-family:var(--font-num);font-size:.85rem}
+.drop{border:2px dashed var(--line);border-radius:6px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.drop.over{border-color:var(--accent);background:var(--warn-bg)}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.thumbs img{height:72px;border-radius:3px;border:1px solid var(--line)}
+.status{font-size:.85rem;min-height:1.2em}
+.status.err{color:var(--bad)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:6px 10px;color:var(--muted)}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:700}
+
+/* summary */
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.sum div{border-left:3px solid var(--line);padding:2px 10px}
+.sum div.main{border-left-color:var(--accent)}
+.sum b{display:block;font-family:var(--font-num);font-size:1.35rem;font-variant-numeric:tabular-nums;font-weight:600}
+.sum span{font-size:.78rem;color:var(--muted);letter-spacing:.06em}
+
+/* table */
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;min-width:860px;font-variant-numeric:tabular-nums}
+th,td{border-bottom:1px solid var(--line);padding:4px 5px;text-align:center;white-space:nowrap}
+th{font-size:.75rem;color:var(--muted);font-weight:500;letter-spacing:.05em;background:var(--bg);position:sticky;top:0}
+td input{width:5.2em;text-align:center;font-family:var(--font-num);font-size:.9rem;padding:4px}
+td input.date{width:6em}
+td input.brk{width:3.8em}
+td input.note{width:9em;font-family:var(--font-body);text-align:left}
+td select{padding:4px;font-size:.85rem}
+td.calc{font-family:var(--font-num);font-size:.9rem}
+td.pay{text-align:right;font-family:var(--font-num)}
+input.bad{border-color:var(--bad);background:var(--bad-bg)}
+tr.check td{background:var(--warn-bg)}
+.badge{font-size:.7rem;padding:1px 6px;border-radius:9px;border:1px solid var(--warn);color:var(--warn)}
+.x{border:none;background:none;color:var(--muted);padding:2px 6px}
+.x:hover{color:var(--bad)}
+tfoot td{font-weight:700;font-family:var(--font-num);background:var(--bg)}
+
+/* settings */
+details.panel>summary{cursor:pointer;font-weight:700;letter-spacing:.06em;list-style:none}
+details.panel>summary::before{content:"▸ ";color:var(--accent)}
+details.panel[open]>summary::before{content:"▾ "}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px 20px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>label{font-size:.8rem;color:var(--muted);letter-spacing:.04em}
+.field .row input[type=number]{width:6.5em}
+.sample-note{font-size:.8rem;color:var(--warn);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:4px;font-size:.9rem;z-index:20}
+@media (prefers-reduced-motion:no-preference){.toast{transition:opacity .2s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>タイムカード計算<small>写真を読み取って、実働・残業・深夜・給与を計算</small></h1>
+    <div class="row">
+      <button id="btnAdd">＋ 行を追加</button>
+      <button id="btnClear">表を空にする</button>
+    </div>
+  </header>
+
+  <section class="panel" aria-labelledby="h-read">
+    <h2 id="h-read">1. 読み取り</h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabImg" aria-selected="true">写真から</button>
+      <button role="tab" id="tabTxt" aria-selected="false">テキストから</button>
+    </div>
+    <div id="paneImg" class="row" style="flex-direction:column;align-items:stretch;gap:10px">
+      <div class="drop" id="drop">
+        <div>タイムカードの写真をここにドロップ、または</div>
+        <label class="btn" for="file">写真を選ぶ（複数OK）</label>
+        <input type="file" id="file" accept="image/*" multiple hidden>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+      <div class="row">
+        <label class="muted" for="year">年月</label>
+        <input type="month" id="year">
+        <label class="row muted"><input type="checkbox" id="append"> 今の表に追加する</label>
+        <button class="primary" id="btnRead" disabled>AIで読み取る</button>
+        <button id="btnStop" hidden>中止</button>
+      </div>
+      <div class="status" id="status"></div>
+      <p class="muted" id="aiNote" style="margin:0">読み取りにはClaudeを使います（初回に許可を求められます）。読めなかった箇所は黄色で表示するので、写真と見比べて直してください。</p>
+    </div>
+    <div id="paneTxt" hidden style="display:flex;flex-direction:column;gap:8px">
+      <textarea id="txt" placeholder="1日ごとに1行。例：&#10;1 8:58 12:00 13:00 18:05&#10;2(火) 9時 17時半&#10;11/3 0930 1800 休憩60&#10;5 22:00 6:00"></textarea>
+      <div class="row">
+        <button class="primary" id="btnParse">表に取り込む</button>
+        <span class="muted">時刻の書き方は「9:00」「9.00」「0900」「9時30分」「17時半」どれでも可。1行に時刻が4つあれば 出勤・休憩入・休憩戻・退勤 と見なします。「休憩60」で休憩分を指定できます。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-table">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-table">2. 明細 <span class="sample-note" id="sampleNote" hidden>（サンプルデータです）</span></h2>
+      <span class="muted">時刻はそのまま打ち直せます。退勤が出勤より前なら日跨ぎとして計算（「25:30」表記も可）。</span>
+    </div>
+    <div class="tablebox">
+      <table>
+        <thead><tr>
+          <th>日付</th><th>種別</th><th>出勤</th><th>休憩入</th><th>休憩戻</th><th>退勤</th><th>休憩(分)</th>
+          <th>実働</th><th>残業</th><th>深夜</th><th>金額</th><th>メモ</th><th></th>
+        </tr></thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr id="tfoot"></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-sum">
+    <div class="row" style="justify-content:space-between">
+      <h2 id="h-sum">3. 集計</h2>
+      <div class="row">
+        <button id="btnCopy">結果をコピー</button>
+        <button id="btnCsv">CSVをコピー</button>
+        <button id="btnDl" hidden>CSVを保存</button>
+      </div>
+    </div>
+    <div class="sum" id="sum"></div>
+    <p class="muted" id="sumNote" style="margin:0"></p>
+  </section>
+
+  <details class="panel" id="settings" open>
+    <summary>計算ルール（ここで融通をきかせる）</summary>
+    <div class="grid">
+      <div class="field"><label for="wage">時給（円）</label><input type="number" id="wage" min="0" step="1"></div>
+      <div class="field"><label for="commute">交通費（円／出勤日）</label><input type="number" id="commute" min="0" step="1"></div>
+      <div class="field"><label>出勤の丸め</label>
+        <div class="row"><select id="rinUnit"></select><select id="rinDir"></select></div></div>
+      <div class="field"><label>退勤の丸め</label>
+        <div class="row"><select id="routUnit"></select><select id="routDir"></select></div></div>
+      <div class="field"><label for="brkMode">休憩の扱い（行に休憩分・打刻がない日）</label>
+        <select id="brkMode">
+          <option value="law">労基法の最低限（6h超→45分、8h超→60分）</option>
+          <option value="fixed">毎日固定で引く</option>
+          <option value="none">引かない</option>
+        </select>
+        <div class="row" id="brkFixedBox"><input type="number" id="brkFixed" min="0" step="5"> <span class="muted">分</span></div>
+      </div>
+      <div class="field"><label>残業（1日あたり）</label>
+        <div class="row"><input type="number" id="otHours" min="0" step="0.5"><span class="muted">時間を超えた分 ×</span><input type="number" id="otRate" min="1" step="0.05"></div></div>
+      <div class="field"><label>深夜（22時〜翌5時）の割増</label>
+        <div class="row"><span class="muted">＋</span><input type="number" id="nightRate" min="0" step="0.05"><span class="muted">（0で無効）</span></div>
+        <div class="row"><input type="time" id="nightStart" step="300"><span class="muted">〜</span><input type="time" id="nightEnd" step="300"></div></div>
+      <div class="field"><label>休日出勤（種別「休日」の行）</label>
+        <div class="row"><span class="muted">×</span><input type="number" id="holRate" min="1" step="0.05"></div></div>
+      <div class="field"><label>金額の端数</label>
+        <select id="yenRound"><option value="round">四捨五入</option><option value="floor">切り捨て</option><option value="ceil">切り上げ</option></select></div>
+    </div>
+    <div class="row"><button id="btnReset">ルールを初期値に戻す</button><span class="muted">ルールと表はこのブラウザに保存されます。</span></div>
+  </details>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+const $ = id => document.getElementById(id);
+const DEF = {wage:1200, commute:0, rinUnit:1, rinDir:"ceil", routUnit:1, routDir:"floor", brkMode:"law", brkFixed:60,
+  otHours:8, otRate:1.25, nightRate:0.25, nightStart:"22:00", nightEnd:"05:00", holRate:1.35, yenRound:"round"};
+const SAMPLE = [
+  {date:"11/1",kind:"通常",in:"8:56",bs:"12:00",be:"13:00",out:"18:04",brk:"",note:""},
+  {date:"11/2",kind:"通常",in:"9:02",bs:"",be:"",out:"17:31",brk:"",note:""},
+  {date:"11/3",kind:"休日",in:"10:00",bs:"",be:"",out:"15:00",brk:"30",note:"祝日"},
+  {date:"11/4",kind:"通常",in:"8:55",bs:"12:10",be:"13:05",out:"20:47",brk:"",note:""},
+  {date:"11/5",kind:"通常",in:"17:00",bs:"",be:"",out:"1:30",brk:"45",note:"夜勤"},
+];
+let S = {...DEF}, rows = [], isSample = false, images = [];
+
+// ---------- storage ----------
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem("tc.settings")||"null"); if(s) S = {...DEF, ...s}; }catch(e){}
+  try{ const r = JSON.parse(localStorage.getItem("tc.rows")||"null"); if(Array.isArray(r)){ rows = r; return; } }catch(e){}
+  rows = SAMPLE.map(r => ({...r})); isSample = true;
+}
+function save(){
+  try{ localStorage.setItem("tc.settings", JSON.stringify(S)); }catch(e){}
+  try{ if(!isSample) localStorage.setItem("tc.rows", JSON.stringify(rows)); }catch(e){}
+}
+
+// ---------- time parsing ----------
+const z2h = s => String(s||"").replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0)-0xFEE0))
+  .replace(/[：﹕]/g,":").replace(/[．。]/g,".").replace(/[ \t\u3000]+/g," ").trim();
+function parseTime(raw){
+  let s = z2h(raw); if(!s) return null;
+  let pm = false;
+  if(/午後|pm/i.test(s)) pm = true;
+  s = s.replace(/午前|午後|am|pm/ig,"").trim();
+  let h, m;
+  let a = s.match(/^(\d{1,2})\s*[:.・\-時h](\d{1,2})?\s*(分|半)?$/i);
+  if(a){ h = +a[1]; m = a[3]==="半" ? 30 : (a[2]!==undefined ? +a[2] : 0);
+    if(a[2]!==undefined && a[2].length===1 && /[:.]/.test(s)) m = +a[2]*10; // "9.5"→9:50
+  }
+  else if(/^\d{3,4}$/.test(s)){ h = +s.slice(0,-2); m = +s.slice(-2); }
+  else if(/^\d{1,2}$/.test(s)){ h = +s; m = 0; }
+  else return null;
+  if(pm && h < 12) h += 12;
+  if(m > 59 || h > 47) return null;
+  return h*60 + m;
+}
+const fmt = min => min==null ? "" : `${Math.floor(min/60)}:${String(min%60).padStart(2,"0")}`;
+const fmtH = min => min ? `${Math.floor(min/60)}:${String(Math.round(min%60)).padStart(2,"0")}` : "—";
+const yen = n => "¥" + Math.round(n).toLocaleString("ja-JP");
+
+function roundT(t, unit, dir){
+  unit = +unit; if(!unit || unit<=1 || dir==="none") return t;
+  const f = dir==="ceil" ? Math.ceil : dir==="floor" ? Math.floor : Math.round;
+  return f(t/unit)*unit;
+}
+function overlap(a,b,c,d){ return Math.max(0, Math.min(b,d) - Math.max(a,c)); }
+function nightMin(a,b){
+  const ns = parseTime(S.nightStart) ?? 1320, ne0 = parseTime(S.nightEnd) ?? 300;
+  const ne = ne0 <= ns ? ne0 + 1440 : ne0;
+  let t = 0; for(let k=-1;k<=2;k++) t += overlap(a,b,ns+1440*k,ne+1440*k); return t;
+}
+
+// ---------- calc one row ----------
+function calc(r){
+  const out = {ok:false, bad:{}};
+  const tin = parseTime(r.in), tout = parseTime(r.out);
+  if(r.in && tin==null) out.bad.in = true;
+  if(r.out && tout==null) out.bad.out = true;
+  let bs = parseTime(r.bs), be = parseTime(r.be);
+  if(r.bs && bs==null) out.bad.bs = true;
+  if(r.be && be==null) out.bad.be = true;
+  const brkRaw = z2h(r.brk);
+  let brkManual = brkRaw==="" ? null : (/^\d+$/.test(brkRaw) ? +brkRaw : (parseTime(brkRaw) ?? NaN));
+  if(Number.isNaN(brkManual)){ out.bad.brk = true; brkManual = null; }
+  if(tin==null || tout==null) return out;
+
+  const a = roundT(tin, S.rinUnit, S.rinDir);
+  let b = roundT(tout, S.routUnit, S.routDir);
+  if(tout <= tin) b += 1440;            // 日跨ぎ
+  if(b <= a) return out;
+  const span = b - a;
+
+  let brk = 0, brkInterval = null;
+  if(brkManual != null) brk = brkManual;
+  else if(bs!=null && be!=null){
+    if(bs < a) bs += 1440; if(be < bs) be += 1440;
+    brk = be - bs; brkInterval = [bs,be];
+  } else if(S.brkMode==="fixed") brk = +S.brkFixed||0;
+  else if(S.brkMode==="law") brk = span > 480 ? 60 : span > 360 ? 45 : 0;
+  brk = Math.min(brk, span);
+
+  const work = span - brk;
+  let night = 0;
+  if(+S.nightRate > 0){
+    night = nightMin(a,b);
+    if(brkInterval) night -= nightMin(brkInterval[0], brkInterval[1]);
+    else if(brk && night){ // 時刻不明の休憩は深夜帯以外から先に引く
+      const day = span - night; if(brk > day) night -= (brk - day);
+    }
+    night = Math.max(0, Math.min(night, work));
+  }
+  const hol = r.kind==="休日";
+  const ot = hol ? 0 : Math.max(0, work - (+S.otHours||0)*60);
+  const w = +S.wage||0;
+  let pay = hol ? work/60*w*(+S.holRate||1) : work/60*w + ot/60*w*((+S.otRate||1)-1);
+  pay += night/60*w*(+S.nightRate||0);
+  return {ok:true, bad:out.bad, a, b, brk, work, ot, night, pay, hol};
+}
+
+// ---------- render ----------
+const COLS = [["date","date"],["kind",null],["in",""],["bs",""],["be",""],["out",""],["brk","brk"]];
+function render(){
+  const tb = $("tbody"); tb.textContent = "";
+  rows.forEach((r,i) => {
+    const c = calc(r);
+    const tr = document.createElement("tr");
+    if(r.check) tr.className = "check";
+    for(const [k,cls] of COLS){
+      const td = document.createElement("td");
+      if(k==="kind"){
+        const sel = document.createElement("select");
+        sel.setAttribute("aria-label","種別"); sel.id = `r${i}-kind`;
+        for(const v of ["通常","休日"]){ const o = new Option(v,v); sel.add(o); }
+        sel.value = r.kind || "通常";
+        sel.onchange = () => { r.kind = sel.value; changed(); };
+        td.append(sel);
+      } else {
+        const inp = document.createElement("input");
+        inp.id = `r${i}-${k}`; inp.value = r[k] ?? ""; if(cls) inp.className = cls;
+        inp.setAttribute("aria-label", {date:"日付",in:"出勤",bs:"休憩入",be:"休憩戻",out:"退勤",brk:"休憩分"}[k]);
+        inp.inputMode = k==="date" ? "text" : "numeric";
+        if(k==="brk") inp.placeholder = "自動";
+        if(c.bad[k]) inp.classList.add("bad");
+        inp.onchange = () => {
+          let v = inp.value.trim();
+          if(["in","bs","be","out"].includes(k)){ const t = parseTime(v); if(t!=null) v = fmt(t); }
+          r[k] = v; r.check = false; changed();
+        };
+        td.append(inp);
+      }
+      tr.append(td);
+    }
+    const cells = c.ok ? [fmtH(c.work), fmtH(c.ot), fmtH(c.night)] : ["—","—","—"];
+    for(const v of cells){ const td = document.createElement("td"); td.className="calc"; td.textContent = v; tr.append(td); }
+    const tdp = document.createElement("td"); tdp.className="pay"; tdp.textContent = c.ok ? yen(c.pay) : ""; tr.append(tdp);
+    const tdn = document.createElement("td");
+    const note = document.createElement("input"); note.className="note"; note.id=`r${i}-note`; note.value = r.note||"";
+    note.setAttribute("aria-label","メモ");
+    note.onchange = () => { r.note = note.value; changed(false); };
+    tdn.append(note);
+    if(r.check){ const b = document.createElement("span"); b.className="badge"; b.textContent="要確認"; tdn.append(" ", b); }
+    tr.append(tdn);
+    const tdx = document.createElement("td");
+    const x = document.createElement("button"); x.className="x"; x.textContent="✕"; x.title="この行を削除"; x.setAttribute("aria-label","この行を削除");
+    x.onclick = () => { rows.splice(i,1); changed(); };
+    tdx.append(x); tr.append(tdx);
+    tb.append(tr);
+  });
+  renderSummary();
+  $("sampleNote").hidden = !isSample;
+}
+
+function totals(){
+  let days=0, work=0, ot=0, night=0, pay=0, brk=0, hol=0;
+  for(const r of rows){ const c = calc(r); if(!c.ok) continue;
+    days++; work+=c.work; ot+=c.ot; night+=c.night; pay+=c.pay; brk+=c.brk; if(c.hol) hol++; }
+  const f = {round:Math.round, floor:Math.floor, ceil:Math.ceil}[S.yenRound] || Math.round;
+  const salary = f(pay), commute = days*(+S.commute||0);
+  return {days, work, ot, night, brk, hol, salary, commute, total: salary+commute};
+}
+function renderSummary(){
+  const t = totals();
+  const items = [
+    ["出勤日数", `${t.days}日`], ["実働合計", fmtH(t.work)], ["残業", fmtH(t.ot)], ["深夜", fmtH(t.night)],
+    ["給与", yen(t.salary)], ["交通費", yen(t.commute)], ["支給見込み", yen(t.total), true],
+  ];
+  const box = $("sum"); box.textContent = "";
+  for(const [k,v,main] of items){ const d = document.createElement("div"); if(main) d.className="main";
+    const s = document.createElement("span"); s.textContent = k; const b = document.createElement("b"); b.textContent = v; d.append(s,b); box.append(d); }
+  $("sumNote").textContent = `実働 ${(t.work/60).toFixed(2)}時間 ／ 休憩合計 ${fmtH(t.brk)}` + (t.hol?` ／ 休日出勤 ${t.hol}日`:"") + " ／ 税・社会保険料は引いていない額です。";
+  const tf = $("tfoot"); tf.textContent = "";
+  const cells = ["合計","","","","","","", fmtH(t.work), fmtH(t.ot), fmtH(t.night), yen(t.salary), "", ""];
+  for(const v of cells){ const td = document.createElement("td"); td.textContent = v; tf.append(td); }
+}
+function changed(rerender = true){ if(isSample){ isSample = false; } save(); if(rerender) render(); }
+
+// ---------- text import ----------
+function parseLines(text){
+  const out = [];
+  for(let line of z2h(text).split(/\n/)){
+    line = line.trim(); if(!line) continue;
+    const r = {date:"",kind:"通常",in:"",bs:"",be:"",out:"",brk:"",note:""};
+    const dm = line.match(/^((?:\d{1,2}[\/\-月])?\d{1,2})(?:日)?(?:\s*[\(（][^)）]*[\)）]|[月火水木金土日](?![0-9]))?\s+/);
+    if(dm && !/^\d{1,2}\s*[:.時]/.test(line)){ r.date = dm[1].replace("月","/"); line = line.slice(dm[0].length); }
+    const bm = line.match(/休憩\s*(\d+)\s*分?/); if(bm){ r.brk = bm[1]; line = line.replace(bm[0]," "); }
+    if(/休|公休|有給/.test(line) && !/\d{1,2}\s*[:.時]/.test(line)) { r.note = line; out.push(r); continue; }
+    const re = /(\d{1,2})\s*[:.・時](\d{1,2})?\s*(分|半)?|(?<!\d)(\d{3,4})(?!\d)/g;
+    const ts = []; let m;
+    while((m = re.exec(line))){ const t = parseTime(m[0]); if(t!=null) ts.push(fmt(t)); }
+    if(!ts.length) continue;
+    r.in = ts[0]; if(ts.length>1) r.out = ts[ts.length-1];
+    if(ts.length>=4){ r.bs = ts[1]; r.be = ts[2]; }
+    if(ts.length>=6 && !r.brk){ // 休憩2回以上→合計分に
+      let sum = 0; for(let i=1;i+1<ts.length-1;i+=2){ let x=parseTime(ts[i]), y=parseTime(ts[i+1]); if(y<x) y+=1440; sum += y-x; }
+      r.brk = String(sum); r.bs = r.be = "";
+    }
+    if(ts.length===3) r.check = true;
+    out.push(r);
+  }
+  return out;
+}
+function importRows(newRows, append){
+  if(isSample || !append) rows = [];
+  rows.push(...newRows); isSample = false; save(); render();
+}
+
+// ---------- AI reading ----------
+let sample = null, ctl = null;
+function setStatus(msg, err){ const s = $("status"); s.textContent = msg; s.classList.toggle("err", !!err); }
+function updateReadBtn(){ $("btnRead").disabled = !sample || !images.length || !!ctl; }
+function addImages(files){
+  for(const f of files){ if(!f.type.startsWith("image/")) continue; images.push(f);
+    const img = document.createElement("img"); img.alt = f.name; img.src = URL.createObjectURL(f); $("thumbs").append(img); }
+  updateReadBtn();
+}
+const ERR = {not_granted:"Claudeの利用が許可されていません。テキスト入力か手入力で使えます。", rate_limited:"混み合っています。少し待ってからもう一度押してください。",
+  image_rejected:"この画像は読めませんでした。別の写真を選んでください。", invalid_json:"読み取り結果を表にできませんでした。もう一度押すか、写真を撮り直してください。",
+  refused:"この画像は読み取れませんでした。", session_expired:"ログインし直してください。", images_unavailable:"この画面では画像を送れません。テキストから取り込んでください。"};
+
+async function readImages(){
+  const ym = $("year").value;
+  const prompt = `添付画像は日本のタイムカード（勤怠打刻の記録）です。${images.length}枚あります。
+打刻を1日1行で読み取り、次のJSONだけを返してください。
+{"rows":[{"date":"11/1","in":"8:58","break_start":"12:00","break_end":"13:00","out":"18:05","break_minutes":null,"holiday":false,"unclear":false,"note":""}]}
+ルール:
+- 対象年月は${ym || "画像から判断"}。dateは "月/日" 形式。
+- 時刻は24時間表記 "H:MM"。午後の印字(例 PM 6:05、または午後欄)は18:05のように変換。日跨ぎの退勤はそのまま(例 1:30)。
+- 列が「出勤・外出・戻り・退勤」なら外出→break_start、戻り→break_end。打刻が2つだけなら in と out。
+- 同じ日に休憩が複数回あるなら合計分をbreak_minutesに入れ、break_start/break_endはnull。
+- 手書きの修正や訂正印があれば修正後の値を採用し、noteに「手書き修正」と書く。
+- かすれ・重なりで自信がない値は最も可能性の高い値を入れ、unclearをtrue、noteに何が怪しいか短く書く。
+- 打刻のない日（休み）は出力しない。土日祝の印字や「休日」欄の出勤はholiday:true。
+- 推測で時刻を作らない。読めない値はnull。`;
+  ctl = new AbortController(); updateReadBtn(); $("btnStop").hidden = false;
+  setStatus("読み取り中…（30秒〜1分ほどかかります）");
+  try{
+    const res = await sample.json(prompt, {images, signal: ctl.signal, modelTier:"default"});
+    const list = Array.isArray(res) ? res : (res && Array.isArray(res.rows) ? res.rows : null);
+    if(!list) throw {code:"invalid_json"};
+    const norm = v => { if(v==null || v==="") return ""; const t = parseTime(String(v)); return t==null ? String(v) : fmt(t); };
+    const newRows = list.map(x => ({
+      date: String(x.date ?? ""), kind: x.holiday ? "休日" : "通常",
+      in: norm(x.in), bs: norm(x.break_start), be: norm(x.break_end), out: norm(x.out),
+      brk: x.break_minutes!=null && x.break_minutes!=="" ? String(x.break_minutes) : "",
+      note: String(x.note ?? ""), check: !!x.unclear || x.in==null || x.out==null,
+    }));
+    importRows(newRows, $("append").checked);
+    const n = newRows.filter(r => r.check).length;
+    setStatus(`${newRows.length}日分を読み取りました。` + (n ? `黄色の${n}行は写真と見比べて確認してください。` : "念のため写真と見比べて確認してください。"));
+  }catch(e){
+    if(e && e.code==="cancelled") setStatus("中止しました。");
+    else setStatus(ERR[e && e.code] || "読み取りに失敗しました。もう一度押してください。", true);
+    if(e && (e.code==="not_granted" || e.code==="sampling_disabled")) { sample = null; $("aiNote").textContent = ERR.not_granted; }
+  }finally{ ctl = null; $("btnStop").hidden = true; updateReadBtn(); }
+}
+
+// ---------- export ----------
+function csv(){
+  const head = ["日付","種別","出勤","休憩入","休憩戻","退勤","休憩分","実働(h)","残業(h)","深夜(h)","金額","メモ"];
+  const q = v => /[",\n]/.test(v) ? `"${String(v).replace(/"/g,'""')}"` : v;
+  const lines = [head.join(",")];
+  for(const r of rows){ const c = calc(r);
+    lines.push([r.date, r.kind||"通常", r.in, r.bs, r.be, r.out, c.ok?c.brk:"", c.ok?(c.work/60).toFixed(2):"", c.ok?(c.ot/60).toFixed(2):"", c.ok?(c.night/60).toFixed(2):"", c.ok?Math.round(c.pay):"", r.note||""].map(v=>q(String(v??""))).join(",")); }
+  return lines.join("\n");
+}
+function summaryText(){
+  const t = totals();
+  return `出勤 ${t.days}日 / 実働 ${fmtH(t.work)}（${(t.work/60).toFixed(2)}h） / 残業 ${fmtH(t.ot)} / 深夜 ${fmtH(t.night)}\n給与 ${yen(t.salary)} + 交通費 ${yen(t.commute)} = ${yen(t.total)}\n（時給${S.wage}円、残業${S.otHours}h超×${S.otRate}、深夜+${S.nightRate}）`;
+}
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(()=>t.hidden=true, 1800); }
+function copy(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast("コピーしました"), ()=>fallback());
+  } else fallback();
+  function fallback(){ $("tabTxt").click(); const ta = $("txt"); ta.value = text; ta.focus(); ta.select(); toast("選択しました。コピーしてください"); }
+}
+
+// ---------- settings UI ----------
+function initSettings(){
+  const units = [[1,"しない"],[5,"5分"],[10,"10分"],[15,"15分"],[30,"30分"],[60,"60分"]];
+  const dirs = [["ceil","切り上げ"],["floor","切り捨て"],["round","四捨五入"]];
+  for(const id of ["rinUnit","routUnit"]) for(const [v,l] of units) $(id).add(new Option(l, v));
+  for(const id of ["rinDir","routDir"]) for(const [v,l] of dirs) $(id).add(new Option(l, v));
+  const keys = Object.keys(DEF);
+  const sync = () => { for(const k of keys){ $(k).value = S[k]; } $("brkFixedBox").hidden = S.brkMode!=="fixed";
+    $("rinDir").disabled = +S.rinUnit<=1; $("routDir").disabled = +S.routUnit<=1; };
+  for(const k of keys){ $(k).addEventListener("input", () => {
+    const el = $(k); S[k] = el.type==="number" ? (el.value===""?0:+el.value) : el.value;
+    sync(); save(); render(); }); }
+  $("btnReset").onclick = () => { S = {...DEF}; sync(); save(); render(); toast("初期値に戻しました"); };
+  sync();
+}
+
+// ---------- wire up ----------
+function init(){
+  load(); initSettings(); render();
+  const now = new Date(); $("year").value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  const tab = img => { $("tabImg").setAttribute("aria-selected", img); $("tabTxt").setAttribute("aria-selected", !img); $("paneImg").hidden = !img; $("paneTxt").hidden = img; };
+  $("tabImg").onclick = () => tab(true); $("tabTxt").onclick = () => tab(false);
+  $("file").onchange = e => { addImages(e.target.files); e.target.value = ""; };
+  const drop = $("drop");
+  drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+  drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+  drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); addImages(e.dataTransfer.files); });
+  document.addEventListener("paste", e => { const fs = [...(e.clipboardData?.files||[])]; if(fs.length) addImages(fs); });
+  $("btnRead").onclick = readImages;
+  $("btnStop").onclick = () => ctl && ctl.abort();
+  $("btnParse").onclick = () => { const r = parseLines($("txt").value); if(!r.length){ toast("時刻が見つかりませんでした"); return; } importRows(r, $("append").checked); toast(`${r.length}行を取り込みました`); };
+  $("btnAdd").onclick = () => { if(isSample){ rows = []; isSample = false; } rows.push({date:"",kind:"通常",in:"",bs:"",be:"",out:"",brk:"",note:""}); changed(); const i = rows.length-1; const el = $(`r${i}-date`); el && el.focus(); };
+  const clr = $("btnClear");
+  clr.onclick = () => { if(clr.dataset.armed){ rows = []; isSample = false; changed(); clr.textContent = "表を空にする"; delete clr.dataset.armed; toast("空にしました"); }
+    else { clr.dataset.armed = 1; clr.textContent = "本当に空にする？"; setTimeout(()=>{ delete clr.dataset.armed; clr.textContent = "表を空にする"; }, 3000); } };
+  $("btnCopy").onclick = () => copy(summaryText());
+  $("btnCsv").onclick = () => copy(csv());
+
+  if(window.claude && claude.use){
+    claude.use("sample").then(async s => {
+      if(!s){ noAI(); return; }
+      const lim = await s.limits().catch(() => null);
+      if(!lim || !lim.images){ noAI(); return; }
+      sample = s; updateReadBtn();
+    });
+    claude.use("downloads").then(d => { if(!d) return; const b = $("btnDl"); b.hidden = false;
+      b.onclick = () => d.save({filename:"timecard.csv", data:"﻿"+csv()}).then(()=>toast("保存しました"), e => { if(e && e.code!=="declined") toast("保存できませんでした"); }); });
+  } else noAI();
+  function noAI(){ $("aiNote").textContent = "この画面ではAI読み取りが使えません。「テキストから」に打刻を貼り付けるか、表に直接入力してください。"; }
+}
+init();
+})();
+</script>
