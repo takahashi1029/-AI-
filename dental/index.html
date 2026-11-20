@@ -470,7 +470,7 @@ function renderForm(m) {
         <label>医院<select id="f-clinic">${clinicOpts}<option value="__new" ${draft.clinicId === "__new" ? "selected" : ""}>＋ 新しい医院を追加</option></select></label>
         ${draft.clinicId === "__new" ? `<label>新しい医院名<input id="f-newclinic" value="${esc(draft._newClinic)}" placeholder="例：青葉歯科医院"></label>` : ""}
         <div class="grid2">
-          <label>担当医<input id="f-doctor" value="${esc(draft.doctor)}" placeholder="例：山田"></label>
+          <label>担当医<input id="f-doctor" value="${esc(draft.doctor)}" placeholder="例：山田 太郎"></label>
           <label>患者名<input id="f-patient" value="${esc(draft.patient)}" placeholder="例：佐藤 花子"></label>
         </div>
         <div class="grid2">
@@ -947,7 +947,7 @@ function aiPrompt() {
 
 {
  "clinic": "発行医院名（例：○○歯科医院）",
- "doctor": "歯科医師名（姓だけでよい）",
+ "doctor": "歯科医師名をフルネームで（例：山田 太郎。姓と名の間に半角スペース。ハンコや印字の医院名の横に書かれていることが多い）",
  "patient": "患者名",
  "sex": "男 / 女 / 空文字",
  "age": "年齢の数字 or 空文字",
@@ -1045,13 +1045,13 @@ function sampleOrders() {
   const t = today();
   const base = { sample: true, sex: "", age: "", ins: "", metal: "", attach: [], attachOther: "", dueTime: "", deliveredDate: "", photoIds: [], note: "" };
   return [
-    { ...base, id: uid(), no: "S001", clinicId: "c1", doctor: "山田", patient: "佐藤 花子", recvDate: addDays(t, -6), dueDate: addDays(t, 1), dueTime: "10:00", shipDate: addDays(t, -1), status: "making", ins: "自費", note: "隣接面コンタクトやや強めで", attach: ["対合歯", "BT"],
+    { ...base, id: uid(), no: "S001", clinicId: "c1", doctor: "山田 太郎", patient: "佐藤 花子", recvDate: addDays(t, -6), dueDate: addDays(t, 1), dueTime: "10:00", shipDate: addDays(t, -1), status: "making", ins: "自費", note: "隣接面コンタクトやや強めで", attach: ["対合歯", "BT"],
       lines: [{ itemId: "i11", name: "ジルコニア", price: 25000, qty: 1, shade: "A3", teeth: ["UR6"] }] },
-    { ...base, id: uid(), no: "S002", clinicId: "c2", doctor: "中村", patient: "鈴木 一郎", recvDate: addDays(t, -3), dueDate: t, status: "recv", ins: "保険", metal: "12%金パラ", attach: ["対合歯"],
+    { ...base, id: uid(), no: "S002", clinicId: "c2", doctor: "中村 修", patient: "鈴木 一郎", recvDate: addDays(t, -3), dueDate: t, status: "recv", ins: "保険", metal: "12%金パラ", attach: ["対合歯"],
       lines: [{ itemId: "i3", name: "インレー", price: 4500, qty: 2, shade: "", teeth: ["LL6", "LL7"] }] },
-    { ...base, id: uid(), no: "S003", clinicId: "c1", doctor: "山田", patient: "高橋 美咲", recvDate: addDays(t, -2), dueDate: addDays(t, 6), dueTime: "09:00", shipDate: addDays(t, 4), status: "recv", ins: "保険", note: "義歯完成。対合削合しました。保持強めでお願いします", attach: ["対合歯", "咬合器"],
+    { ...base, id: uid(), no: "S003", clinicId: "c1", doctor: "山田 太郎", patient: "高橋 美咲", recvDate: addDays(t, -2), dueDate: addDays(t, 6), dueTime: "09:00", shipDate: addDays(t, 4), status: "recv", ins: "保険", note: "義歯完成。対合削合しました。保持強めでお願いします", attach: ["対合歯", "咬合器"],
       lines: [{ itemId: "i13", name: "義歯（完成）", price: 30000, qty: 1, shade: "", teeth: ["UR7", "UR6", "UR5", "UR4", "UR3", "UR2", "UR1", "UL4", "UL5", "UL6", "UL7"] }] },
-    { ...base, id: uid(), no: "S004", clinicId: "c1", doctor: "山田", patient: "田中 健", recvDate: addDays(t, -12), dueDate: addDays(t, -5), status: "done", deliveredDate: addDays(t, -5), ins: "保険",
+    { ...base, id: uid(), no: "S004", clinicId: "c1", doctor: "山田 太郎", patient: "田中 健", recvDate: addDays(t, -12), dueDate: addDays(t, -5), status: "done", deliveredDate: addDays(t, -5), ins: "保険",
       lines: [{ itemId: "i8", name: "CAD/CAM冠", price: 9000, qty: 1, shade: "A3", teeth: ["LR5"] }] },
   ];
 }
