@@ -379,26 +379,27 @@ function render() {
 const persistBanner = () => store.persistent ? "" : `<div class="banner">このブラウザではデータを保存できない状態です（プライベートモードなど）。閉じると消えるので、通常モードで開いてください。</div>`;
 
 /* ---------- list ---------- */
+const targetDate = o => o.shipDate || o.dueDate || "";
 function dueState(o) {
-  if (o.status === "done" || !o.dueDate) return "";
+  if (o.status === "done" || !targetDate(o)) return "";
   const t = today();
-  if (o.dueDate < t) return "late"; if (o.dueDate === t) return "today"; return "";
+  const d = targetDate(o); if (d < t) return "late"; if (d === t) return "today"; return "";
 }
 function renderList(m) {
   setChrome("技工指示書ノート", false, "list");
   const t = today();
   const open = ORDERS.filter(o => o.status !== "done");
-  const late = open.filter(o => o.dueDate && o.dueDate < t).length;
-  const dueToday = open.filter(o => o.dueDate === t).length;
+  const late = open.filter(o => dueState(o) === "late").length;
+  const dueToday = open.filter(o => dueState(o) === "today").length;
   const q = listQuery.trim();
   let rows = ORDERS.filter(o => listFilter === "all" ? true : listFilter === "open" ? o.status !== "done" : o.status === listFilter);
   if (q) rows = rows.filter(o => [o.patient, clinicName(o.clinicId), o.doctor, o.no, ...o.lines.map(l => l.name)].join(" ").includes(q));
-  rows.sort((a, b) => a.status === "done" && b.status === "done" ? (b.deliveredDate || "").localeCompare(a.deliveredDate || "") : (a.dueDate || "9999").localeCompare(b.dueDate || "9999"));
+  rows.sort((a, b) => a.status === "done" && b.status === "done" ? (b.deliveredDate || "").localeCompare(a.deliveredDate || "") : (targetDate(a) || "9999").localeCompare(targetDate(b) || "9999"));
   const f = (k, label) => `<button type="button" data-filter="${k}" aria-pressed="${listFilter === k}">${label}</button>`;
   m.innerHTML = `${persistBanner()}
     <div class="summary">
-      <div class="${late ? "alert" : ""}"><b>${late}</b><span>納期遅れ</span></div>
-      <div class="${dueToday ? "alert" : ""}"><b>${dueToday}</b><span>今日が納期</span></div>
+      <div class="${late ? "alert" : ""}"><b>${late}</b><span>納品遅れ</span></div>
+      <div class="${dueToday ? "alert" : ""}"><b>${dueToday}</b><span>今日納品</span></div>
       <div><b>${open.length}</b><span>製作待ち・製作中</span></div>
     </div>
     <button type="button" class="btn primary block" data-act="new">＋ 指示書を受付する</button>
@@ -417,13 +418,13 @@ function renderList(m) {
 }
 function orderCard(o) {
   const ds = dueState(o);
-  const dueChip = ds === "late" ? `<span class="chip due-late">納期遅れ</span>` : ds === "today" ? `<span class="chip due-today">今日納期</span>` : "";
+  const dueChip = ds === "late" ? `<span class="chip due-late">納品遅れ</span>` : ds === "today" ? `<span class="chip due-today">今日納品</span>` : "";
   const what = o.lines.map(l => `${esc(l.name)}${l.teeth?.length ? ` <span class="num">${esc(fmtTeeth(l.teeth))}</span>` : ""}`).join("、") || `<span class="muted">技工物未入力</span>`;
   return `<button type="button" class="order" data-order="${o.id}">
     <span class="who">${esc(o.patient || "（患者名なし）")} <span class="muted small">様</span></span>
     <span class="meta"><span class="chip st-${o.status}">${STATUS[o.status]}</span></span>
     <span class="clinic">${esc(clinicName(o.clinicId))}${o.doctor ? `・${esc(o.doctor)}先生` : ""}</span>
-    <span class="meta"><span class="due">${o.status === "done" ? `納品 ${md(o.deliveredDate)}` : `納期 ${md(o.dueDate)}`}</span></span>
+    <span class="meta"><span class="due">${o.status === "done" ? `納品 ${md(o.deliveredDate)}` : o.shipDate ? `納品予定 ${md(o.shipDate)}` : `納期 ${md(o.dueDate)}`}</span></span>
     <span class="what">${what}</span>
     ${dueChip || o.sample ? `<span class="row" style="grid-column:1/-1;margin-top:4px">${dueChip}${o.sample ? `<span class="chip sample">サンプル</span>` : ""}</span>` : ""}
   </button>`;
@@ -434,7 +435,7 @@ function blankLine() { const it = S.items[0]; return { itemId: it?.id || "", nam
 function startDraft(id) {
   const o = id ? ORDERS.find(x => x.id === id) : null;
   draft = o ? structuredClone(o) : {
-    id: null, clinicId: S.clinics[0]?.id || "", doctor: "", patient: "", recvDate: today(), dueDate: addDays(today(), 7), dueTime: "",
+    id: null, clinicId: S.clinics[0]?.id || "", doctor: "", patient: "", recvDate: today(), dueDate: addDays(today(), 7), dueTime: "", shipDate: "",
     sex: "", age: "", ins: "", metal: "", attach: [], attachOther: "",
     lines: [blankLine()], note: "", status: "recv", photoIds: [],
   };
@@ -478,9 +479,10 @@ function renderForm(m) {
         </div>
         <div class="grid2">
           <label>納期の時刻<input type="time" id="f-time" value="${esc(draft.dueTime || "")}"></label>
-          <label>保険・自費<select id="f-ins">${["", "保険", "自費"].map(v => `<option value="${v}" ${draft.ins === v ? "selected" : ""}>${v || "—"}</option>`).join("")}</select></label>
+          <label>納品予定日<input type="date" id="f-ship" value="${esc(draft.shipDate || "")}"></label>
         </div>
-        <div class="grid2">
+        <div class="grid3">
+          <label>保険・自費<select id="f-ins">${["", "保険", "自費"].map(v => `<option value="${v}" ${draft.ins === v ? "selected" : ""}>${v || "—"}</option>`).join("")}</select></label>
           <label>性別<select id="f-sex">${["", "男", "女"].map(v => `<option value="${v}" ${draft.sex === v ? "selected" : ""}>${v || "—"}</option>`).join("")}</select></label>
           <label>年齢<input id="f-age" type="number" inputmode="numeric" value="${esc(draft.age || "")}" placeholder="歳"></label>
         </div>
@@ -542,6 +544,7 @@ function bindForm(m) {
     else if (t.id === "f-patient") draft.patient = t.value;
     else if (t.id === "f-recv") draft.recvDate = t.value;
     else if (t.id === "f-due") draft.dueDate = t.value;
+    else if (t.id === "f-ship") draft.shipDate = t.value;
     else if (t.id === "f-note") draft.note = t.value;
     else if (t.id === "f-time") draft.dueTime = t.value;
     else if (t.id === "f-age") draft.age = t.value;
@@ -652,7 +655,8 @@ function renderDetail(m) {
           ${o.ins ? `<dt>区分</dt><dd>${esc(o.ins)}</dd>` : ""}
           ${o.metal ? `<dt>金属</dt><dd>${esc(o.metal)}</dd>` : ""}
           <dt>受付日</dt><dd>${jpDate(o.recvDate) || "—"}</dd>
-          <dt>納期</dt><dd>${jpDate(o.dueDate) || "—"} ${esc(o.dueTime || "")} ${dueState(o) === "late" ? `<span class="chip due-late">納期遅れ</span>` : dueState(o) === "today" ? `<span class="chip due-today">今日納期</span>` : ""}</dd>
+          <dt>納期</dt><dd>${jpDate(o.dueDate) || "—"} ${esc(o.dueTime || "")}</dd>
+          <dt>納品予定</dt><dd>${jpDate(o.shipDate) || "—"} ${dueState(o) === "late" ? `<span class="chip due-late">納品遅れ</span>` : dueState(o) === "today" ? `<span class="chip due-today">今日納品</span>` : ""}</dd>
           ${(o.attach || []).length || o.attachOther ? `<dt>添付品</dt><dd>${esc([...(o.attach || []), o.attachOther].filter(Boolean).join("、"))}</dd>` : ""}
           ${o.note ? `<dt>メモ</dt><dd style="white-space:pre-wrap">${esc(o.note)}</dd>` : ""}
         </dl>
@@ -948,20 +952,24 @@ function aiPrompt() {
  "issueDate": "発行日 YYYY-MM-DD or 空文字",
  "dueDate": "納期 YYYY-MM-DD or 空文字",
  "dueTime": "納期の時刻 HH:MM（24時間）or 空文字",
+ "shipDate": "納品予定日 YYYY-MM-DD or 空文字",
  "metal": "12%金パラ / 銀合金 / チタン / Co-Cr / その他 / 空文字（丸やチェックがついたもの）",
  "shade": "シェード（例 A3）or 空文字",
  "lines": [ { "item": "製作物名", "teeth": ["UR7","UL4"], "shade": "" } ],
  "attach": ["対合歯","BT","参考模型","咬合器","トレー","人工歯" のうち丸やチェックがついたもの],
- "note": "設計・技工コメント・メモ欄と付箋の文章を、読める範囲でそのまま書き起こしたもの",
+ "note": "手書きのメモをすべて書き起こした文章（下のルール参照）",
  "unsure": "読み取りに自信がない項目の短いメモ"
 }
 
 ルール:
+- 納期の時刻：「AM・PM ○時 ○○」の欄。丸で囲まれている方（AM か PM）を必ず見て、AMなら午前、PMなら午後として24時間表記にする（例：AMに丸・9時00 → "09:00"、PMに丸・3時 → "15:00"）。「時」の前の数字が時、後の数字が分。分が無ければ 00。
+- 納期の時刻欄の右にある四角い枠の数字（赤字で書かれることが多い、例「24」）は、技工所の「納品予定日」の日にち。月は納期と同じ月にする（その日にちが納期の日より大きいときは前の月）。shipDate に入れる。
 - 年が書かれていない日付は ${t.slice(0, 4)} 年として扱う（今日は ${t}）。
 - 製作物の「item」は、できるだけ次の名前のどれかに合わせる：${S.items.map(i => i.name).join("、")}。チェック欄に印がなくても、メモ（例「ギシ完成」＝義歯（完成））から分かれば入れる。どれにも当たらなければ書いてある名前のまま。
 - 部位は「87654321｜12345678」の歯式で、上の段が上顎、下の段が下顎、縦線の左側が患者の右、右側が患者の左。丸で囲まれた数字や印のついた歯が対象。歯の絵に印がある場合も同じ。メモ中の「32┘」のような書き方も同じ意味（┘=右上、└=左上、┐=右下、┌=左下）。
 - 部位のコード：右上=UR、左上=UL、右下=LR、左下=LL の後に歯の番号（例：右上6=UR6、左下7=LL7）。
 - 義歯の場合は、印のついた歯をすべて teeth に入れて lines は1行にする。
+- note には、手書きで書かれた文章やメモを省略せずすべて書き起こす：「設計・技工コメント・メモ」欄、付箋や別紙のメモ、余白や題名の横の書き込み（赤字を含む）。歯式（例「32┘」）もそのまま書く。場所ごとに改行し、先頭に【メモ欄】【付箋】【余白】のように場所を付ける。崩れた字は前後の文脈から歯科技工の言葉として自然に読み、どうしても読めない文字は「□」にする。メモがあるのに note を空にしない。
 - 読めない項目は空文字にし、推測で埋めない。技工所自身の名前・住所（用紙下部の印刷）は clinic に入れない。`;
 }
 function matchClinic(name) {
@@ -1006,6 +1014,7 @@ function applyAi(r) {
   if (str(r.age).match(/^\d+$/)) draft.age = str(r.age);
   if (["保険", "自費"].includes(str(r.ins))) draft.ins = str(r.ins);
   if (date(r.dueDate)) draft.dueDate = date(r.dueDate);
+  if (date(r.shipDate)) draft.shipDate = date(r.shipDate);
   if (/^\d{1,2}:\d{2}$/.test(str(r.dueTime))) draft.dueTime = str(r.dueTime).padStart(5, "0");
   if (METALS.includes(str(r.metal)) && str(r.metal)) draft.metal = str(r.metal);
   if (Array.isArray(r.attach)) { const a = r.attach.map(str).filter(x => ATTACH.includes(x)); if (a.length) draft.attach = a; }
@@ -1026,11 +1035,11 @@ function sampleOrders() {
   const t = today();
   const base = { sample: true, sex: "", age: "", ins: "", metal: "", attach: [], attachOther: "", dueTime: "", deliveredDate: "", photoIds: [], note: "" };
   return [
-    { ...base, id: uid(), no: "S001", clinicId: "c1", doctor: "山田", patient: "佐藤 花子", recvDate: addDays(t, -6), dueDate: addDays(t, -1), dueTime: "10:00", status: "making", ins: "自費", note: "隣接面コンタクトやや強めで", attach: ["対合歯", "BT"],
+    { ...base, id: uid(), no: "S001", clinicId: "c1", doctor: "山田", patient: "佐藤 花子", recvDate: addDays(t, -6), dueDate: addDays(t, 1), dueTime: "10:00", shipDate: addDays(t, -1), status: "making", ins: "自費", note: "隣接面コンタクトやや強めで", attach: ["対合歯", "BT"],
       lines: [{ itemId: "i11", name: "ジルコニア", price: 25000, qty: 1, shade: "A3", teeth: ["UR6"] }] },
     { ...base, id: uid(), no: "S002", clinicId: "c2", doctor: "中村", patient: "鈴木 一郎", recvDate: addDays(t, -3), dueDate: t, status: "recv", ins: "保険", metal: "12%金パラ", attach: ["対合歯"],
       lines: [{ itemId: "i3", name: "インレー", price: 4500, qty: 2, shade: "", teeth: ["LL6", "LL7"] }] },
-    { ...base, id: uid(), no: "S003", clinicId: "c1", doctor: "山田", patient: "高橋 美咲", recvDate: addDays(t, -2), dueDate: addDays(t, 6), dueTime: "09:00", status: "recv", ins: "保険", note: "義歯完成。対合削合しました。保持強めでお願いします", attach: ["対合歯", "咬合器"],
+    { ...base, id: uid(), no: "S003", clinicId: "c1", doctor: "山田", patient: "高橋 美咲", recvDate: addDays(t, -2), dueDate: addDays(t, 6), dueTime: "09:00", shipDate: addDays(t, 4), status: "recv", ins: "保険", note: "義歯完成。対合削合しました。保持強めでお願いします", attach: ["対合歯", "咬合器"],
       lines: [{ itemId: "i13", name: "義歯（完成）", price: 30000, qty: 1, shade: "", teeth: ["UR7", "UR6", "UR5", "UR4", "UR3", "UR2", "UR1", "UL4", "UL5", "UL6", "UL7"] }] },
     { ...base, id: uid(), no: "S004", clinicId: "c1", doctor: "山田", patient: "田中 健", recvDate: addDays(t, -12), dueDate: addDays(t, -5), status: "done", deliveredDate: addDays(t, -5), ins: "保険",
       lines: [{ itemId: "i8", name: "CAD/CAM冠", price: 9000, qty: 1, shade: "A3", teeth: ["LR5"] }] },
