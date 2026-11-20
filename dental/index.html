@@ -460,6 +460,7 @@ function renderForm(m) {
         <div class="photos" id="photos">${draft.photoIds.map(id => `<div class="photo"><img data-photo="${id}" alt="指示書の写真" data-zoom="${id}"><button type="button" class="x" data-rmphoto="${id}" aria-label="写真を外す">×</button></div>`).join("") || `<p class="muted small" style="margin:0">指示書を撮影しておくと、原本の控えとして後から見返せます。写真はこのスマホの中だけに保存されます。</p>`}</div>
         <div class="grid2"><label class="btn filebtn primary" id="f-cam">カメラで撮る<input type="file" accept="image/*" capture="environment" data-file></label><label class="btn filebtn" id="f-photo">写真から選ぶ<input type="file" accept="image/*" multiple data-file></label></div>
         <p class="muted small" style="margin:0">Claudeアプリの中では押せないことがあります。そのときはSafariやChromeで開いてください。</p>
+        <div id="aiBox"></div>
       </div>
     </div>
     <div class="section">
@@ -505,7 +506,7 @@ function renderForm(m) {
       <span class="grow muted small">合計 <b class="num" style="color:var(--ink);font-size:16px" id="sumNow">${yen(orderSubtotal(draft))}</b>（税抜）</span>
       <button type="button" class="btn primary" data-act="save">${editing ? "変更を保存" : "受付を保存"}</button>
     </div>`;
-  bindForm(m); saveDraftSoon();
+  bindForm(m); saveDraftSoon(); updateAiBox();
 }
 function lineHTML(l, i) {
   const opts = S.items.map(it => `<option value="${it.id}" ${it.id === l.itemId ? "selected" : ""}>${esc(it.name)}（${yen(it.price)}）</option>`).join("");
@@ -582,6 +583,8 @@ function bindForm(m) {
       rerenderLines(m);
     }
     else if (act === "save") saveDraft(m);
+    else if (act === "aiRead") aiRead();
+    else if (act === "aiStop") aiCtl?.abort();
   };
 }
 document.addEventListener("paste", e => {
@@ -923,6 +926,101 @@ function renderSettings(m) {
 }
 function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
 
+/* ---------- 写真から読み取り（Claude） ---------- */
+let sampleFn = null, sampleMax = 0, aiBusy = false, aiCtl = null, aiMsg = "";
+function updateAiBox() {
+  const box = $("#aiBox"); if (!box || !draft) return;
+  if (!sampleFn || !sampleMax) { box.innerHTML = ""; return; }
+  if (aiBusy) { box.innerHTML = `<div class="hint">写真を読み取っています…（30秒〜1分ほどかかります）</div><button type="button" class="btn small" data-act="aiStop">読み取りをやめる</button>`; return; }
+  box.innerHTML = `<button type="button" class="btn primary block" data-act="aiRead" ${draft.photoIds.length ? "" : "disabled"}>${draft.photoIds.length ? "写真から読み取って入力する" : "写真を付けると自動で読み取れます"}</button>${aiMsg ? `<div class="hint">${esc(aiMsg)}</div>` : ""}`;
+}
+function aiPrompt() {
+  const t = today();
+  return `これは日本の歯科技工所に届いた「歯科技工指示書」の写真です（付箋のメモが一緒に写っていることもあります）。手書きと印字が混ざっています。読み取って、次の形のJSONだけを返してください。
+
+{
+ "clinic": "発行医院名（例：○○歯科医院）",
+ "doctor": "歯科医師名（姓だけでよい）",
+ "patient": "患者名",
+ "sex": "男 / 女 / 空文字",
+ "age": "年齢の数字 or 空文字",
+ "ins": "保険 / 自費 / 空文字（丸がついている方）",
+ "issueDate": "発行日 YYYY-MM-DD or 空文字",
+ "dueDate": "納期 YYYY-MM-DD or 空文字",
+ "dueTime": "納期の時刻 HH:MM（24時間）or 空文字",
+ "metal": "12%金パラ / 銀合金 / チタン / Co-Cr / その他 / 空文字（丸やチェックがついたもの）",
+ "shade": "シェード（例 A3）or 空文字",
+ "lines": [ { "item": "製作物名", "teeth": ["UR7","UL4"], "shade": "" } ],
+ "attach": ["対合歯","BT","参考模型","咬合器","トレー","人工歯" のうち丸やチェックがついたもの],
+ "note": "設計・技工コメント・メモ欄と付箋の文章を、読める範囲でそのまま書き起こしたもの",
+ "unsure": "読み取りに自信がない項目の短いメモ"
+}
+
+ルール:
+- 年が書かれていない日付は ${t.slice(0, 4)} 年として扱う（今日は ${t}）。
+- 製作物の「item」は、できるだけ次の名前のどれかに合わせる：${S.items.map(i => i.name).join("、")}。チェック欄に印がなくても、メモ（例「ギシ完成」＝義歯（完成））から分かれば入れる。どれにも当たらなければ書いてある名前のまま。
+- 部位は「87654321｜12345678」の歯式で、上の段が上顎、下の段が下顎、縦線の左側が患者の右、右側が患者の左。丸で囲まれた数字や印のついた歯が対象。歯の絵に印がある場合も同じ。メモ中の「32┘」のような書き方も同じ意味（┘=右上、└=左上、┐=右下、┌=左下）。
+- 部位のコード：右上=UR、左上=UL、右下=LR、左下=LL の後に歯の番号（例：右上6=UR6、左下7=LL7）。
+- 義歯の場合は、印のついた歯をすべて teeth に入れて lines は1行にする。
+- 読めない項目は空文字にし、推測で埋めない。技工所自身の名前・住所（用紙下部の印刷）は clinic に入れない。`;
+}
+function matchClinic(name) {
+  const n = String(name || "").replace(/\s/g, ""); if (!n) return "";
+  const hit = S.clinics.find(c => c.name && (c.name.replace(/\s/g, "").includes(n) || n.includes(c.name.replace(/\s/g, ""))));
+  return hit ? hit.id : "";
+}
+function matchItem(name) {
+  const n = String(name || "").replace(/\s/g, "");
+  return S.items.find(i => i.name.replace(/\s/g, "") === n) || S.items.find(i => n && (i.name.includes(n) || n.includes(i.name.replace(/（.*）/, ""))));
+}
+async function aiRead() {
+  if (!draft || aiBusy || !sampleFn) return;
+  const blobs = [];
+  for (const id of draft.photoIds.slice(0, sampleMax)) { const b = await store.get("photos", id); if (b) blobs.push(b); }
+  if (!blobs.length) { aiMsg = "写真が見つかりませんでした。撮り直してください。"; updateAiBox(); return; }
+  aiBusy = true; aiMsg = ""; aiCtl = new AbortController(); updateAiBox();
+  try {
+    const r = await sampleFn.json(aiPrompt(), { images: blobs, modelTier: "complex", signal: aiCtl.signal, cache: false });
+    applyAi(r || {});
+    aiMsg = "読み取った内容を入れました。写真と見比べて、違うところは直してください。" + (r && r.unsure ? `（自信がない所：${r.unsure}）` : "");
+  } catch (e) {
+    const c = e && e.code;
+    aiMsg = c === "cancelled" ? "" : c === "not_granted" ? "読み取りが許可されませんでした。手で入力してください。"
+      : c === "rate_limited" ? "使いすぎで一時的に止まっています。少し時間をおいて試してください。"
+      : c === "image_rejected" ? "この写真は読み取れませんでした。明るい場所で撮り直してください。"
+      : c === "invalid_json" || c === "empty_completion" ? "うまく読み取れませんでした。もう一度試すか、手で入力してください。"
+      : "読み取りに失敗しました。もう一度試してください。";
+    if (c === "not_granted" || c === "sampling_disabled" || c === "images_unavailable") sampleMax = 0;
+  } finally {
+    aiBusy = false; aiCtl = null;
+    if (view.name === "form" && draft) { renderForm($("#main")); hydratePhotos($("#main")); }
+  }
+}
+function applyAi(r) {
+  const str = v => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim());
+  const date = v => /^\d{4}-\d{2}-\d{2}$/.test(str(v)) ? str(v) : "";
+  if (str(r.clinic)) { const id = matchClinic(r.clinic); if (id) draft.clinicId = id; else { draft.clinicId = "__new"; draft._newClinic = str(r.clinic); } }
+  if (str(r.doctor)) draft.doctor = str(r.doctor);
+  if (str(r.patient)) draft.patient = str(r.patient);
+  if (["男", "女"].includes(str(r.sex))) draft.sex = str(r.sex);
+  if (str(r.age).match(/^\d+$/)) draft.age = str(r.age);
+  if (["保険", "自費"].includes(str(r.ins))) draft.ins = str(r.ins);
+  if (date(r.dueDate)) draft.dueDate = date(r.dueDate);
+  if (/^\d{1,2}:\d{2}$/.test(str(r.dueTime))) draft.dueTime = str(r.dueTime).padStart(5, "0");
+  if (METALS.includes(str(r.metal)) && str(r.metal)) draft.metal = str(r.metal);
+  if (Array.isArray(r.attach)) { const a = r.attach.map(str).filter(x => ATTACH.includes(x)); if (a.length) draft.attach = a; }
+  if (str(r.note)) draft.note = draft.note ? draft.note + "\n" + str(r.note) : str(r.note);
+  if (Array.isArray(r.lines) && r.lines.length) {
+    draft.lines = r.lines.map(x => {
+      const it = matchItem(x && x.item);
+      const teeth = Array.isArray(x && x.teeth) ? [...new Set(x.teeth.map(str).filter(t => /^(UR|UL|LR|LL)[1-8]$/.test(t)))] : [];
+      const name = it ? it.name : (str(x && x.item) || "（品名なし）");
+      const denture = /義歯|ロー堤|ナイトガード/.test(name);
+      return { itemId: it ? it.id : "", name, price: it ? it.price : 0, qty: denture ? 1 : Math.max(1, teeth.length), shade: str(x && x.shade) || str(r.shade), teeth, _open: false };
+    });
+  } else if (str(r.shade)) draft.lines.forEach(l => { if (!l.shade) l.shade = str(r.shade); });
+}
+
 /* ---------- sample data (first launch only) ---------- */
 function sampleOrders() {
   const t = today();
@@ -952,5 +1050,13 @@ function sampleOrders() {
     ORDERS = ORDERS.concat(sm); await store.put("kv", 1, "seeded"); await saveSettings();
   }
   render();
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("sample").then(async fn => {
+      if (!fn) return;
+      const lim = await fn.limits().catch(() => null);
+      sampleFn = fn; sampleMax = lim && lim.images ? lim.images.maxCount : 0;
+      updateAiBox();
+    }).catch(() => {});
+  }
 })();
 </script>
