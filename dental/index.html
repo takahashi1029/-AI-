@@ -443,6 +443,7 @@ function startDraft(id) {
   if (!o && draft.lines[0]) draft.lines[0]._open = true;
 }
 function discardDraftPhotos() {
+  store.del("kv", "draft");
   if (!draft) return;
   draft._added.forEach(id => { store.del("photos", id); photoURL.delete(id); });
   draft = null;
@@ -504,7 +505,7 @@ function renderForm(m) {
       <span class="grow muted small">合計 <b class="num" style="color:var(--ink);font-size:16px" id="sumNow">${yen(orderSubtotal(draft))}</b>（税抜）</span>
       <button type="button" class="btn primary" data-act="save">${editing ? "変更を保存" : "受付を保存"}</button>
     </div>`;
-  bindForm(m);
+  bindForm(m); saveDraftSoon();
 }
 function lineHTML(l, i) {
   const opts = S.items.map(it => `<option value="${it.id}" ${it.id === l.itemId ? "selected" : ""}>${esc(it.name)}（${yen(it.price)}）</option>`).join("");
@@ -535,7 +536,7 @@ function rerenderLines(m) {
 function bindForm(m) {
   const val = id => $("#" + id, m)?.value ?? "";
   m.oninput = e => {
-    const t = e.target;
+    const t = e.target; saveDraftSoon();
     if (t.id === "f-doctor") draft.doctor = t.value;
     else if (t.id === "f-patient") draft.patient = t.value;
     else if (t.id === "f-recv") draft.recvDate = t.value;
@@ -589,10 +590,19 @@ document.addEventListener("paste", e => {
   if (fs.length) { e.preventDefault(); onFiles(fs); }
 });
 async function onFiles(files) {
-  if (!draft || !files.length) return;
-  for (const f of files) { const blob = await shrink(f); const id = uid(); await store.put("photos", blob, id); draft.photoIds.push(id); draft._added.push(id); }
+  if (!files.length) { toast("写真を受け取れませんでした"); return; }
+  if (!draft) startDraft(null);
+  toast("写真を取り込み中…");
+  let ok = 0;
+  for (const f of files) {
+    try { const blob = await shrink(f); const id = uid(); await store.put("photos", blob, id); photoURL.set(id, URL.createObjectURL(blob)); draft.photoIds.push(id); draft._added.push(id); ok++; }
+    catch (err) { toast("写真を取り込めませんでした：" + (err && err.message || err)); }
+  }
+  if (view.name !== "form") { view = { name: "form", param: null }; }
   renderForm($("#main")); hydratePhotos($("#main"));
+  if (ok) toast(`写真を${ok}枚付けました`);
 }
+const saveDraftSoon = debounce(() => { if (draft && view.name === "form") store.put("kv", JSON.parse(JSON.stringify(draft)), "draft"); }, 300);
 async function saveDraft(m) {
   if (draft.clinicId === "__new") {
     const name = draft._newClinic.trim();
@@ -610,7 +620,7 @@ async function saveDraft(m) {
   await store.put("orders", o);
   removed.forEach(id => { store.del("photos", id); photoURL.delete(id); });
   ORDERS = ORDERS.filter(x => x.id !== o.id).concat(o);
-  draft = null;
+  draft = null; store.del("kv", "draft");
   toast(isNew ? "受付を保存しました" : "変更を保存しました");
   history = history.filter(h => h.name !== "form" && !(h.name === "detail" && h.param === o.id));
   view = { name: "detail", param: o.id }; render(); window.scrollTo(0, 0);
@@ -935,6 +945,8 @@ function sampleOrders() {
   const saved = await store.get("kv", "settings");
   if (saved) S = { ...structuredClone(DEFAULT_SETTINGS), ...saved, lab: { ...DEFAULT_SETTINGS.lab, ...(saved.lab || {}) } };
   ORDERS = (await store.all("orders")) || [];
+  const d = await store.get("kv", "draft");
+  if (d && d.photoIds) { draft = d; view = { name: "form", param: null }; setTimeout(() => toast("入力途中の内容を戻しました"), 400); }
   if (!(await store.get("kv", "seeded"))) {
     const sm = sampleOrders(); for (const o of sm) await store.put("orders", o);
     ORDERS = ORDERS.concat(sm); await store.put("kv", 1, "seeded"); await saveSettings();
