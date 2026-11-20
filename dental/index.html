@@ -100,6 +100,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .btn.danger.armed { background: var(--warn); color: var(--surface); }
 .btn.small { padding: 7px 10px; font-size: 13px; border-radius: 8px; }
 .btn.block { width: 100%; }
+label.filebtn { position: relative; flex-direction: row; font-size: 15px; color: var(--ink); overflow: hidden; }
+label.filebtn input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 0; padding: 0; border: 0; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row > .grow { flex: 1; min-width: 0; }
 .muted { color: var(--muted); }
@@ -217,8 +219,6 @@ table.items td.r, table.items th.r { text-align: right; white-space: nowrap; }
   <button type="button" data-tab="bill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>請求</button>
   <button type="button" data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>設定</button>
 </nav>
-<input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
-<input type="file" id="fileLib" accept="image/*" multiple hidden>
 
 <script>
 "use strict";
@@ -456,7 +456,7 @@ function renderForm(m) {
       <h2>指示書の写真</h2>
       <div class="panel">
         <div class="photos" id="photos">${draft.photoIds.map(id => `<div class="photo"><img data-photo="${id}" alt="指示書の写真" data-zoom="${id}"><button type="button" class="x" data-rmphoto="${id}" aria-label="写真を外す">×</button></div>`).join("") || `<p class="muted small" style="margin:0">指示書を撮影しておくと、原本の控えとして後から見返せます。写真はこのスマホの中だけに保存されます。</p>`}</div>
-        <div class="grid2"><button type="button" class="btn" data-act="cam">カメラで撮る</button><button type="button" class="btn" data-act="lib">写真から選ぶ</button></div>
+        <div class="grid2"><label class="btn filebtn">カメラで撮る<input type="file" accept="image/*" capture="environment" data-file></label><label class="btn filebtn">写真から選ぶ<input type="file" accept="image/*" multiple data-file></label></div>
       </div>
     </div>
     <div class="section">
@@ -550,6 +550,7 @@ function bindForm(m) {
   };
   m.onchange = e => {
     const t = e.target;
+    if (t.matches("[data-file]")) { const fs = [...t.files]; t.value = ""; onFiles(fs); return; }
     if (t.id === "f-ins") draft.ins = t.value;
     else if (t.id === "f-sex") draft.sex = t.value;
     else if (t.id === "f-metal") draft.metal = t.value;
@@ -568,9 +569,7 @@ function bindForm(m) {
     if (rp) { const id = rp.dataset.rmphoto; draft.photoIds = draft.photoIds.filter(x => x !== id); if (draft._added.includes(id)) { draft._added = draft._added.filter(x => x !== id); store.del("photos", id); } renderForm(m); hydratePhotos(m); return; }
     const a = e.target.closest("[data-act]"); if (!a) return;
     const act = a.dataset.act; const li = a.closest(".line"); const i = li ? +li.dataset.i : -1;
-    if (act === "cam") $("#fileCam").click();
-    else if (act === "lib") $("#fileLib").click();
-    else if (act === "addLine") { draft.lines.forEach(l => l._open = false); const nl = blankLine(); nl._open = true; draft.lines.push(nl); rerenderLines(m); }
+    if (act === "addLine") { draft.lines.forEach(l => l._open = false); const nl = blankLine(); nl._open = true; draft.lines.push(nl); rerenderLines(m); }
     else if (act === "rmLine") { draft.lines.splice(i, 1); rerenderLines(m); }
     else if (act === "toggleChart") { draft.lines[i]._open = !draft.lines[i]._open; rerenderLines(m); }
     else if (act === "tooth") {
@@ -587,8 +586,6 @@ async function onFiles(files) {
   for (const f of files) { const blob = await shrink(f); const id = uid(); await store.put("photos", blob, id); draft.photoIds.push(id); draft._added.push(id); }
   renderForm($("#main")); hydratePhotos($("#main"));
 }
-$("#fileCam").addEventListener("change", e => { onFiles([...e.target.files]); e.target.value = ""; });
-$("#fileLib").addEventListener("change", e => { onFiles([...e.target.files]); e.target.value = ""; });
 async function saveDraft(m) {
   if (draft.clinicId === "__new") {
     const name = draft._newClinic.trim();
