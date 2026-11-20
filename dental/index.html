@@ -425,7 +425,7 @@ function orderCard(o) {
     <span class="meta"><span class="chip st-${o.status}">${STATUS[o.status]}</span></span>
     <span class="clinic">${esc(clinicName(o.clinicId))}${o.doctor ? `・${esc(o.doctor)}先生` : ""}</span>
     <span class="meta"><span class="due">${o.status === "done" ? `納品 ${md(o.deliveredDate)}` : o.shipDate ? `納品予定 ${md(o.shipDate)}` : `納期 ${md(o.dueDate)}`}</span></span>
-    <span class="what">${what}</span>
+    <span class="what">${o.product ? `<b style="color:var(--warn)">${esc(o.product)}</b>　` : ""}${what}</span>
     ${dueChip || o.sample ? `<span class="row" style="grid-column:1/-1;margin-top:4px">${dueChip}${o.sample ? `<span class="chip sample">サンプル</span>` : ""}</span>` : ""}
   </button>`;
 }
@@ -435,7 +435,7 @@ function blankLine() { const it = S.items[0]; return { itemId: it?.id || "", nam
 function startDraft(id) {
   const o = id ? ORDERS.find(x => x.id === id) : null;
   draft = o ? structuredClone(o) : {
-    id: null, clinicId: S.clinics[0]?.id || "", doctor: "", patient: "", recvDate: today(), dueDate: addDays(today(), 7), dueTime: "", shipDate: "",
+    id: null, clinicId: S.clinics[0]?.id || "", doctor: "", patient: "", recvDate: today(), dueDate: addDays(today(), 7), dueTime: "", shipDate: "", product: "",
     sex: "", age: "", ins: "", metal: "", attach: [], attachOther: "",
     lines: [blankLine()], note: "", status: "recv", photoIds: [],
   };
@@ -491,6 +491,7 @@ function renderForm(m) {
     </div>
     <div class="section">
       <h2>技工物</h2>
+      <label>納品物（指示書右上の赤字）<input id="f-product" value="${esc(draft.product || "")}" placeholder="例：キセト"></label>
       <div id="lines" class="section">${draft.lines.map(lineHTML).join("")}</div>
       <button type="button" class="btn" data-act="addLine">＋ 技工物を追加</button>
     </div>
@@ -545,6 +546,7 @@ function bindForm(m) {
     else if (t.id === "f-recv") draft.recvDate = t.value;
     else if (t.id === "f-due") draft.dueDate = t.value;
     else if (t.id === "f-ship") draft.shipDate = t.value;
+    else if (t.id === "f-product") draft.product = t.value;
     else if (t.id === "f-note") draft.note = t.value;
     else if (t.id === "f-time") draft.dueTime = t.value;
     else if (t.id === "f-age") draft.age = t.value;
@@ -649,6 +651,7 @@ function renderDetail(m) {
     <div class="section"><h2>依頼内容</h2>
       <div class="panel">
         <dl class="kv">
+          ${o.product ? `<dt>納品物</dt><dd style="color:var(--warn);font-weight:700">${esc(o.product)}</dd>` : ""}
           <dt>医院</dt><dd>${esc(clinicName(o.clinicId))}</dd>
           <dt>担当医</dt><dd>${esc(o.doctor) || "—"}</dd>
           <dt>患者名</dt><dd>${esc(o.patient) || "—"} 様${o.sex || o.age ? `（${esc(o.sex || "")}${o.age ? " " + esc(o.age) + "歳" : ""}）` : ""}</dd>
@@ -935,7 +938,7 @@ let sampleFn = null, sampleMax = 0, aiBusy = false, aiCtl = null, aiMsg = "";
 function updateAiBox() {
   const box = $("#aiBox"); if (!box || !draft) return;
   if (!sampleFn || !sampleMax) { box.innerHTML = ""; return; }
-  if (aiBusy) { box.innerHTML = `<div class="hint">写真を読み取っています…（30秒〜1分ほどかかります）</div><button type="button" class="btn small" data-act="aiStop">読み取りをやめる</button>`; return; }
+  if (aiBusy) { box.innerHTML = `<div class="hint">写真を読み取っています…（10〜30秒ほど）</div><button type="button" class="btn small" data-act="aiStop">読み取りをやめる</button>`; return; }
   box.innerHTML = `<button type="button" class="btn primary block" data-act="aiRead" ${draft.photoIds.length ? "" : "disabled"}>${draft.photoIds.length ? "写真から読み取って入力する" : "写真を付けると自動で読み取れます"}</button>${aiMsg ? `<div class="hint">${esc(aiMsg)}</div>` : ""}`;
 }
 function aiPrompt() {
@@ -955,6 +958,7 @@ function aiPrompt() {
  "shipDate": "納品予定日 YYYY-MM-DD or 空文字",
  "metal": "12%金パラ / 銀合金 / チタン / Co-Cr / その他 / 空文字（丸やチェックがついたもの）",
  "shade": "シェード（例 A3）or 空文字",
+ "product": "用紙右上（題名「歯科技工指示書」の右）に赤字で書かれた納品物をそのまま",
  "lines": [ { "item": "製作物名", "teeth": ["UR7","UL4"], "shade": "" } ],
  "attach": ["対合歯","BT","参考模型","咬合器","トレー","人工歯" のうち丸やチェックがついたもの],
  "note": "手書きのメモをすべて書き起こした文章（下のルール参照）",
@@ -965,6 +969,7 @@ function aiPrompt() {
 - 納期の時刻：「AM・PM ○時 ○○」の欄。丸で囲まれている方（AM か PM）を必ず見て、AMなら午前、PMなら午後として24時間表記にする（例：AMに丸・9時00 → "09:00"、PMに丸・3時 → "15:00"）。「時」の前の数字が時、後の数字が分。分が無ければ 00。
 - 納期の時刻欄の右にある四角い枠の数字（赤字で書かれることが多い、例「24」）は、技工所の「納品予定日」の日にち。月は納期と同じ月にする（その日にちが納期の日より大きいときは前の月）。shipDate に入れる。
 - 年が書かれていない日付は ${t.slice(0, 4)} 年として扱う（今日は ${t}）。
+- 用紙の右上、題名の右側に赤字で書かれた文字は技工所が書いた「納品物」（何を納品するか）。最優先で読み、product にそのまま書く（略字・カタカナのことが多い。例「キセト」など）。lines はこの納品物を中心に作る：納品物が製作物の名前に当たればその item にし、部位は歯式から入れる。製作物欄やメモと食い違うときは納品物を優先する。
 - 製作物の「item」は、できるだけ次の名前のどれかに合わせる：${S.items.map(i => i.name).join("、")}。チェック欄に印がなくても、メモ（例「ギシ完成」＝義歯（完成））から分かれば入れる。どれにも当たらなければ書いてある名前のまま。
 - 部位は「87654321｜12345678」の歯式で、上の段が上顎、下の段が下顎、縦線の左側が患者の右、右側が患者の左。丸で囲まれた数字や印のついた歯が対象。歯の絵に印がある場合も同じ。メモ中の「32┘」のような書き方も同じ意味（┘=右上、└=左上、┐=右下、┌=左下）。
 - 部位のコード：右上=UR、左上=UL、右下=LR、左下=LL の後に歯の番号（例：右上6=UR6、左下7=LL7）。
@@ -988,7 +993,7 @@ async function aiRead() {
   if (!blobs.length) { aiMsg = "写真が見つかりませんでした。撮り直してください。"; updateAiBox(); return; }
   aiBusy = true; aiMsg = ""; aiCtl = new AbortController(); updateAiBox();
   try {
-    const r = await sampleFn.json(aiPrompt(), { images: blobs, modelTier: "complex", signal: aiCtl.signal, cache: false });
+    const r = await sampleFn.json(aiPrompt(), { images: blobs, modelTier: "default", effort: "low", signal: aiCtl.signal, cache: false });
     applyAi(r || {});
     aiMsg = "読み取った内容を入れました。写真と見比べて、違うところは直してください。" + (r && r.unsure ? `（自信がない所：${r.unsure}）` : "");
   } catch (e) {
@@ -1008,6 +1013,7 @@ function applyAi(r) {
   const str = v => (typeof v === "string" ? v.trim() : v == null ? "" : String(v).trim());
   const date = v => /^\d{4}-\d{2}-\d{2}$/.test(str(v)) ? str(v) : "";
   if (str(r.clinic)) { const id = matchClinic(r.clinic); if (id) draft.clinicId = id; else { draft.clinicId = "__new"; draft._newClinic = str(r.clinic); } }
+  if (str(r.product)) draft.product = str(r.product);
   if (str(r.doctor)) draft.doctor = str(r.doctor);
   if (str(r.patient)) draft.patient = str(r.patient);
   if (["男", "女"].includes(str(r.sex))) draft.sex = str(r.sex);
